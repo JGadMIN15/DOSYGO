@@ -41,7 +41,7 @@ export default function Header() {
     <header className="sticky top-0 z-50 bg-white shadow-sm">
       {/* Top bar */}
       <div className="text-white text-xs py-2 text-center font-medium" style={{ background: "var(--brand)" }}>
-        Envío gratis en pedidos superiores a 100€ · Entrega en 24-48h
+        Envío gratis en pedidos superiores a 100€ · Entrega en hasta 14 días hábiles
       </div>
 
       {/* Main header */}

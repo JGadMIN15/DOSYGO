@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
         currency: "eur",
         product_data: {
           name: item.name,
-          description: "Reloj Dos&Go - Envío a toda Europa",
+          description: "Reloj Dos&Go - Envío a toda Europa en hasta 14 días hábiles",
         },
         unit_amount: Math.round(item.price * 100),
       },

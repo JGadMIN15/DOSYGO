@@ -226,7 +226,7 @@ export default async function HomePage() {
           </div>
           <div className="relative text-white">
             <h2 className="text-3xl lg:text-4xl font-black mb-2">Envío gratis en toda España</h2>
-            <p className="text-white/80">En compras superiores a €100. Entrega garantizada en 24-48h.</p>
+            <p className="text-white/80">En compras superiores a €100. Entrega en hasta 14 días hábiles.</p>
           </div>
           <Link
             href="/productos"

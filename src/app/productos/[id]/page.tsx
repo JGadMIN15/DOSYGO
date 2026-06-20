@@ -118,7 +118,7 @@ export default async function ProductPage({ params }: Props) {
             {/* Garantías */}
             <div className="grid grid-cols-3 gap-3 mt-5">
               {[
-                { icon: Truck,      label: "Envío 24-48h" },
+                { icon: Truck,      label: "Envío hasta 14 días hábiles" },
                 { icon: Shield,     label: "Garantía 2 años" },
                 { icon: RotateCcw,  label: "30 días devolución" },
               ].map(({ icon: Icon, label }) => (
