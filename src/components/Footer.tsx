@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail, Phone, MapPin, Instagram, Facebook } from "lucide-react";
+import { Mail, Phone, MapPin, Share2, Globe } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -29,15 +29,15 @@ export default function Footer() {
                 className="w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-red-600"
                 style={{ background: "rgba(255,255,255,0.07)" }}
               >
-                <Instagram className="w-4 h-4" />
+                <Share2 className="w-4 h-4" />
               </a>
               <a
                 href="#"
-                aria-label="Facebook"
+                aria-label="Web"
                 className="w-9 h-9 rounded-full flex items-center justify-center transition-colors hover:bg-red-600"
                 style={{ background: "rgba(255,255,255,0.07)" }}
               >
-                <Facebook className="w-4 h-4" />
+                <Globe className="w-4 h-4" />
               </a>
             </div>
           </div>
