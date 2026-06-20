@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
         currency: "eur",
         product_data: {
           name: item.name,
-          description: "Reloj Dos&Go - Envío en 24-48h",
+          description: "Reloj Dos&Go - Envío a toda Europa",
         },
         unit_amount: Math.round(item.price * 100),
       },
@@ -37,20 +37,24 @@ export async function POST(req: NextRequest) {
       mode: "payment",
       line_items: lineItems,
       shipping_address_collection: {
-        allowed_countries: ["ES", "PT", "FR", "DE", "IT", "GB"],
+        allowed_countries: [
+          "ES", "PT", "FR", "DE", "IT", "GB", "NL", "BE", "AT", "CH",
+          "SE", "NO", "DK", "FI", "PL", "CZ", "SK", "HU", "RO", "BG",
+          "HR", "SI", "EE", "LV", "LT", "LU", "IE", "GR", "CY", "MT",
+        ],
       },
       shipping_options: [
         {
           shipping_rate_data: {
             type: "fixed_amount",
             fixed_amount: {
-              amount: items.reduce((s, i) => s + i.price * i.quantity, 0) >= 100 ? 0 : 599,
+              amount: items.reduce((s, i) => s + i.price * i.quantity, 0) >= 100 ? 0 : 500,
               currency: "eur",
             },
-            display_name: "Envío estándar (2-3 días)",
+            display_name: "Envío estándar Europa",
             delivery_estimate: {
               minimum: { unit: "business_day", value: 2 },
-              maximum: { unit: "business_day", value: 3 },
+              maximum: { unit: "business_day", value: 14 },
             },
           },
         },
