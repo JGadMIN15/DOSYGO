@@ -4,33 +4,80 @@ import { prisma } from "@/lib/prisma";
 
 interface CartItem {
   id: string;
-  name: string;
-  price: number;
-  image: string;
   quantity: number;
+}
+
+function isValidCuid(id: string) {
+  return typeof id === "string" && /^c[a-z0-9]{24,}$/i.test(id);
 }
 
 export async function POST(req: NextRequest) {
   try {
-    const { items }: { items: CartItem[] } = await req.json();
+    const body = await req.json();
 
-    if (!items || items.length === 0) {
+    // --- Input validation ---
+    if (!body || !Array.isArray(body.items) || body.items.length === 0) {
       return NextResponse.json({ error: "Carrito vacío" }, { status: 400 });
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    if (body.items.length > 50) {
+      return NextResponse.json({ error: "Demasiados productos" }, { status: 400 });
+    }
 
-    const lineItems = items.map((item) => ({
-      price_data: {
-        currency: "eur",
-        product_data: {
-          name: item.name,
-          description: "Reloj Dos&Go - Envío a toda Europa en hasta 14 días hábiles",
+    const items: CartItem[] = body.items.map((item: Record<string, unknown>) => {
+      if (!isValidCuid(String(item.id ?? ""))) {
+        throw new Error("ID de producto no válido");
+      }
+      const qty = Number(item.quantity);
+      if (!Number.isInteger(qty) || qty < 1 || qty > 99) {
+        throw new Error("Cantidad no válida");
+      }
+      return { id: String(item.id), quantity: qty };
+    });
+
+    // --- Fetch authoritative prices from DB (prevents client-side price tampering) ---
+    const productIds = [...new Set(items.map((i) => i.id))];
+    const dbProducts = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, name: true, price: true, stock: true },
+    });
+
+    if (dbProducts.length !== productIds.length) {
+      return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+    }
+
+    // --- Stock and data validation ---
+    for (const item of items) {
+      const db = dbProducts.find((p) => p.id === item.id)!;
+      if (db.stock < item.quantity) {
+        return NextResponse.json(
+          { error: `Stock insuficiente para ${db.name}` },
+          { status: 409 }
+        );
+      }
+    }
+
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const subtotal = items.reduce((sum, item) => {
+      const db = dbProducts.find((p) => p.id === item.id)!;
+      return sum + db.price * item.quantity;
+    }, 0);
+
+    // --- Line items using DB prices only ---
+    const lineItems = items.map((item) => {
+      const db = dbProducts.find((p) => p.id === item.id)!;
+      return {
+        price_data: {
+          currency: "eur",
+          product_data: {
+            name: db.name,
+            description: "Dos&Go · Envío a toda Europa en hasta 14 días hábiles",
+          },
+          unit_amount: Math.round(db.price * 100),
         },
-        unit_amount: Math.round(item.price * 100),
-      },
-      quantity: item.quantity,
-    }));
+        quantity: item.quantity,
+      };
+    });
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -48,7 +95,7 @@ export async function POST(req: NextRequest) {
           shipping_rate_data: {
             type: "fixed_amount",
             fixed_amount: {
-              amount: items.reduce((s, i) => s + i.price * i.quantity, 0) >= 100 ? 0 : 500,
+              amount: subtotal >= 100 ? 0 : 500,
               currency: "eur",
             },
             display_name: "Envío estándar Europa",
@@ -62,13 +109,18 @@ export async function POST(req: NextRequest) {
       success_url: `${appUrl}/pedido/confirmacion?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/carrito`,
       metadata: {
-        items: JSON.stringify(items.map((i) => ({ id: i.id, qty: i.quantity, price: i.price }))),
+        items: JSON.stringify(items.map((i) => ({
+          id: i.id,
+          qty: i.quantity,
+          price: dbProducts.find((p) => p.id === i.id)!.price,
+        }))),
       },
     });
 
     return NextResponse.json({ url: session.url, sessionId: session.id });
   } catch (err) {
+    const message = err instanceof Error ? err.message : "Error al crear sesión";
     console.error("Checkout error:", err);
-    return NextResponse.json({ error: "Error al crear sesión de pago" }, { status: 500 });
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

@@ -26,76 +26,119 @@ export default async function HomePage() {
   ];
 
   return (
-    <div className="bg-gray-50">
-      {/* Hero */}
+    <div className="bg-white">
+
+      {/* ── Hero ──────────────────────────────────── */}
       <section
         className="relative overflow-hidden"
-        style={{ background: "linear-gradient(135deg, #111 0%, #2a1010 50%, #111 100%)" }}
+        style={{
+          background: "linear-gradient(135deg, #0d0d12 0%, #1a0a0b 45%, #0d0d12 100%)",
+          minHeight: "88vh",
+        }}
       >
-        <div className="absolute inset-0 pointer-events-none opacity-20">
-          <div className="absolute top-0 left-0 w-96 h-96 rounded-full" style={{ background: "var(--brand)", filter: "blur(100px)" }} />
-          <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full" style={{ background: "var(--brand)", filter: "blur(120px)" }} />
+        {/* Ambient glows */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div
+            className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full opacity-20"
+            style={{ background: "var(--brand)", filter: "blur(120px)" }}
+          />
+          <div
+            className="absolute -bottom-40 -right-20 w-[500px] h-[500px] rounded-full opacity-15"
+            style={{ background: "var(--gold)", filter: "blur(140px)" }}
+          />
         </div>
 
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 lg:py-28 grid lg:grid-cols-2 items-center gap-12">
-          {/* Text */}
-          <div className="fade-in-up">
-            <span
-              className="inline-block px-3 py-1 text-xs font-bold uppercase tracking-widest rounded-full mb-5 text-white"
-              style={{ background: "rgba(227,30,36,0.3)", border: "1px solid rgba(227,30,36,0.5)" }}
-            >
-              Nueva Colección 2026
-            </span>
-            <h1 className="text-5xl lg:text-6xl font-black text-white leading-tight mb-5">
-              El tiempo es<br />
-              <span style={{ color: "var(--brand)" }}>tuyo.</span>
-            </h1>
-            <p className="text-gray-400 text-lg mb-8 max-w-md leading-relaxed">
-              Relojes de precisión suiza con diseño español. Cada pieza cuenta una historia.
-            </p>
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/productos"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg text-white font-bold text-sm transition-all hover:opacity-90 active:scale-95"
-                style={{ background: "var(--brand)" }}
-              >
-                Ver colección <ChevronRight className="w-4 h-4" />
-              </Link>
-              <Link
-                href="/productos?orden=nuevo"
-                className="inline-flex items-center gap-2 px-7 py-3.5 rounded-lg font-bold text-sm border border-white/20 text-white hover:bg-white/10 transition-all"
-              >
-                Novedades
-              </Link>
-            </div>
-          </div>
+        {/* Thin decorative horizontal rule */}
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(201,169,110,0.4), transparent)" }} />
 
-          {/* Logo */}
-          <div className="hidden lg:flex justify-center items-center">
-            <div className="relative w-72 h-72">
-              <div className="absolute inset-0 rounded-full" style={{ boxShadow: "0 0 100px rgba(227,30,36,0.35)" }} />
-              <div className="absolute inset-0 rounded-full" style={{ border: "1px solid rgba(227,30,36,0.2)" }} />
-              <div className="absolute inset-8 rounded-full" style={{ border: "1px solid rgba(227,30,36,0.12)" }} />
-              <div className="absolute inset-0 flex items-center justify-center p-10">
-                <LogoTransparent className="w-full h-auto" />
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 flex items-center" style={{ minHeight: "88vh" }}>
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center w-full py-24 lg:py-0">
+
+            {/* Text */}
+            <div>
+              {/* Eyebrow */}
+              <div className="flex items-center gap-3 mb-8 fade-in">
+                <span className="h-px w-8" style={{ background: "var(--gold)" }} />
+                <span
+                  className="text-[10px] font-bold uppercase tracking-[0.25em]"
+                  style={{ color: "var(--gold)" }}
+                >
+                  Nueva Colección 2026
+                </span>
+              </div>
+
+              {/* Headline */}
+              <h1 className="fade-in-up font-display font-bold text-white leading-[1.05] mb-8" style={{ fontSize: "clamp(3.2rem, 7vw, 6rem)" }}>
+                El tiempo<br />
+                es <em className="not-italic" style={{ color: "var(--brand)" }}>tuyo.</em>
+              </h1>
+
+              {/* Body */}
+              <p className="fade-in-up-2 text-gray-400 leading-relaxed mb-10 max-w-md" style={{ fontSize: "1.0625rem" }}>
+                Relojes de precisión con diseño atemporal. Cada pieza es una declaración de quién eres.
+              </p>
+
+              {/* CTAs */}
+              <div className="fade-in-up-3 flex flex-wrap gap-4">
+                <Link href="/productos" className="btn-primary">
+                  Ver colección <ChevronRight className="w-4 h-4" />
+                </Link>
+                <Link href="/productos?orden=nuevo" className="btn-ghost">
+                  Novedades
+                </Link>
+              </div>
+
+              {/* Trust strip */}
+              <div className="mt-12 fade-in-up-3 flex items-center gap-6 border-t pt-8" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+                {["Envío a Europa", "Pago seguro", "Devolución 30 días"].map((t) => (
+                  <span key={t} className="text-[11px] text-gray-500 uppercase tracking-widest">{t}</span>
+                ))}
+              </div>
+            </div>
+
+            {/* Logo orb */}
+            <div className="hidden lg:flex justify-center items-center">
+              <div className="relative w-80 h-80">
+                {/* Outer glow */}
+                <div
+                  className="absolute inset-0 rounded-full"
+                  style={{ boxShadow: "0 0 120px rgba(227,30,36,0.3), 0 0 60px rgba(201,169,110,0.15)" }}
+                />
+                {/* Rings */}
+                <div className="absolute inset-0 rounded-full" style={{ border: "1px solid rgba(201,169,110,0.2)" }} />
+                <div className="absolute inset-6 rounded-full" style={{ border: "1px solid rgba(227,30,36,0.15)" }} />
+                <div className="absolute inset-14 rounded-full" style={{ border: "1px solid rgba(201,169,110,0.1)" }} />
+                {/* Logo */}
+                <div className="absolute inset-0 flex items-center justify-center p-12">
+                  <LogoTransparent className="w-full h-auto drop-shadow-2xl" />
+                </div>
               </div>
             </div>
           </div>
         </div>
+
+        {/* Bottom fade */}
+        <div
+          className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
+          style={{ background: "linear-gradient(to bottom, transparent, rgba(255,255,255,0.04))" }}
+        />
       </section>
 
-      {/* Perks strip */}
-      <section className="bg-white border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
+      {/* ── Perks strip ──────────────────────────── */}
+      <section className="border-b" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             {perks.map(({ icon: Icon, title, desc }) => (
-              <div key={title} className="flex items-center gap-3">
-                <div className="w-9 h-9 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(227,30,36,0.08)" }}>
-                  <Icon className="w-4.5 h-4.5" style={{ color: "var(--brand)" }} />
+              <div key={title} className="flex items-center gap-3.5">
+                <div
+                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  style={{ background: "rgba(227,30,36,0.07)" }}
+                >
+                  <Icon className="w-5 h-5" style={{ color: "var(--brand)" }} />
                 </div>
                 <div>
                   <p className="font-semibold text-gray-900 text-sm">{title}</p>
-                  <p className="text-gray-500 text-xs">{desc}</p>
+                  <p className="text-gray-500 text-xs mt-0.5">{desc}</p>
                 </div>
               </div>
             ))}
@@ -103,19 +146,25 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Featured products */}
+      {/* ── Featured products ─────────────────────── */}
       {featured.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
-          <div className="flex items-end justify-between mb-7">
+        <section className="max-w-7xl mx-auto px-6 lg:px-8 py-20">
+          <div className="flex items-end justify-between mb-10">
             <div>
-              <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "var(--brand)" }}>Selección</p>
-              <h2 className="text-2xl font-black text-gray-900">Más destacados</h2>
+              <span className="section-label">Selección</span>
+              <h2 className="font-display text-3xl lg:text-4xl font-bold text-gray-900">
+                Más destacados
+              </h2>
             </div>
-            <Link href="/productos" className="text-sm font-semibold flex items-center gap-1 hover:underline" style={{ color: "var(--brand)" }}>
+            <Link
+              href="/productos"
+              className="text-sm font-semibold flex items-center gap-1.5 hover:underline underline-offset-4"
+              style={{ color: "var(--brand)" }}
+            >
               Ver todos <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-5">
             {featured.map((product) => (
               <WatchCard key={product.id} product={product} />
             ))}
@@ -123,48 +172,65 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Newest */}
+      {/* ── Newest ───────────────────────────────── */}
       {newest.length > 0 && (
-        <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
-          <div className="flex items-end justify-between mb-7">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "var(--brand)" }}>Recién llegados</p>
-              <h2 className="text-2xl font-black text-gray-900">Últimas incorporaciones</h2>
+        <section className="py-20" style={{ background: "var(--surface)" }}>
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="flex items-end justify-between mb-10">
+              <div>
+                <span className="section-label">Recién llegados</span>
+                <h2 className="font-display text-3xl lg:text-4xl font-bold text-gray-900">
+                  Últimas incorporaciones
+                </h2>
+              </div>
+              <Link
+                href="/productos?orden=nuevo"
+                className="text-sm font-semibold flex items-center gap-1.5 hover:underline underline-offset-4"
+                style={{ color: "var(--brand)" }}
+              >
+                Ver todos <ChevronRight className="w-4 h-4" />
+              </Link>
             </div>
-            <Link href="/productos?orden=nuevo" className="text-sm font-semibold flex items-center gap-1 hover:underline" style={{ color: "var(--brand)" }}>
-              Ver todos <ChevronRight className="w-4 h-4" />
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            {newest.map((product) => (
-              <WatchCard key={product.id} product={product} />
-            ))}
+            <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {newest.map((product) => (
+                <WatchCard key={product.id} product={product} />
+              ))}
+            </div>
           </div>
         </section>
       )}
 
-      {/* CTA banner */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
+      {/* ── CTA banner ───────────────────────────── */}
+      <section className="max-w-7xl mx-auto px-6 lg:px-8 py-20">
         <div
-          className="rounded-2xl p-10 lg:p-14 relative overflow-hidden flex flex-col md:flex-row items-center justify-between gap-8"
-          style={{ background: "linear-gradient(135deg, var(--brand) 0%, var(--brand-dark) 100%)" }}
+          className="rounded-2xl relative overflow-hidden"
+          style={{ background: "linear-gradient(135deg, var(--ink) 0%, var(--ink-2) 100%)" }}
         >
-          <div className="absolute inset-0 pointer-events-none opacity-10">
-            <div className="absolute right-0 top-0 w-72 h-72 rounded-full bg-white" style={{ filter: "blur(60px)" }} />
+          {/* Gold accent line */}
+          <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--gold), transparent)" }} />
+
+          <div className="px-10 lg:px-16 py-14 flex flex-col md:flex-row items-center justify-between gap-8">
+            <div className="relative">
+              <span className="section-label">Oferta especial</span>
+              <h2 className="font-display text-3xl lg:text-4xl font-bold text-white mb-2">
+                Envío gratis en toda Europa
+              </h2>
+              <p className="text-gray-400">En compras superiores a €100. Entrega en hasta 14 días hábiles.</p>
+            </div>
+            <Link
+              href="/productos"
+              className="flex-shrink-0 inline-flex items-center gap-2.5 px-8 py-3.5 rounded bg-white font-bold text-sm hover:opacity-90 transition-all hover:shadow-lg active:scale-95"
+              style={{ color: "var(--brand)", letterSpacing: "0.05em" }}
+            >
+              Comprar ahora <ChevronRight className="w-4 h-4" />
+            </Link>
           </div>
-          <div className="relative text-white">
-            <h2 className="text-3xl lg:text-4xl font-black mb-2">Envío gratis en toda España</h2>
-            <p className="text-white/80">En compras superiores a €100. Entrega en hasta 14 días hábiles.</p>
-          </div>
-          <Link
-            href="/productos"
-            className="relative flex-shrink-0 inline-flex items-center gap-2 px-8 py-3.5 bg-white rounded-lg font-bold text-sm hover:opacity-90 transition-all"
-            style={{ color: "var(--brand)" }}
-          >
-            Comprar ahora <ChevronRight className="w-4 h-4" />
-          </Link>
+
+          {/* Bottom gold line */}
+          <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--gold), transparent)" }} />
         </div>
       </section>
+
     </div>
   );
 }

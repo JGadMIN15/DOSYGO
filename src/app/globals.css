@@ -1,50 +1,78 @@
 @import "tailwindcss";
 
 :root {
-  --brand: #e31e24;
+  --brand:      #e31e24;
   --brand-dark: #b5171c;
-  --brand-light: #ff4d52;
-  --background: #f5f5f5;
-  --foreground: #1a1a1a;
+  --brand-light:#ff4d52;
+  --gold:       #c9a96e;
+  --gold-dark:  #a8864a;
+  --ink:        #111118;
+  --ink-2:      #1e1e28;
+  --background: #ffffff;
+  --surface:    #f7f7f8;
+  --border:     #e8e8ec;
 }
 
 @theme inline {
   --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-brand: var(--brand);
+  --color-foreground: var(--ink);
+  --color-brand:      var(--brand);
   --color-brand-dark: var(--brand-dark);
+  --color-gold:       var(--gold);
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
-html {
-  scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
 
 body {
   background: var(--background);
-  color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  color: var(--ink);
 }
 
-/* ECI-style card */
+/* ── Typography ─────────────────────────────────── */
+.font-display { font-family: var(--font-display, Georgia, serif); }
+.font-sans    { font-family: var(--font-sans, system-ui, sans-serif); }
+
+/* ── Cards ──────────────────────────────────────── */
 .watch-card {
-  transition: box-shadow 0.2s ease;
+  transition: box-shadow 0.3s ease, transform 0.3s ease;
 }
 .watch-card:hover {
-  box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.12);
+  transform: translateY(-4px);
 }
 
+/* ── Gold divider ───────────────────────────────── */
+.gold-line {
+  display: inline-block;
+  width: 40px;
+  height: 2px;
+  background: var(--gold);
+  vertical-align: middle;
+  margin-right: 12px;
+}
+
+/* ── Animations ─────────────────────────────────── */
 @keyframes fadeInUp {
-  from { opacity: 0; transform: translateY(20px); }
+  from { opacity: 0; transform: translateY(28px); }
   to   { opacity: 1; transform: translateY(0); }
 }
-.fade-in-up {
-  animation: fadeInUp 0.5s ease forwards;
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
 }
 
+.fade-in-up  { animation: fadeInUp 0.65s cubic-bezier(0.22,1,0.36,1) forwards; }
+.fade-in     { animation: fadeIn  0.5s ease forwards; }
+.fade-in-up-2{ animation: fadeInUp 0.65s 0.15s cubic-bezier(0.22,1,0.36,1) both; }
+.fade-in-up-3{ animation: fadeInUp 0.65s 0.30s cubic-bezier(0.22,1,0.36,1) both; }
+
+/* ── Utilities ──────────────────────────────────── */
 .line-clamp-2 {
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -52,9 +80,66 @@ body {
   overflow: hidden;
 }
 
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #f1f1f1; }
+::-webkit-scrollbar       { width: 5px; }
+::-webkit-scrollbar-track { background: var(--surface); }
 ::-webkit-scrollbar-thumb { background: var(--brand); border-radius: 3px; }
 
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 .scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* ── Section labels ─────────────────────────────── */
+.section-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--gold);
+  margin-bottom: 10px;
+}
+.section-label::before {
+  content: '';
+  display: inline-block;
+  width: 24px;
+  height: 1px;
+  background: var(--gold);
+}
+
+/* ── Premium button ─────────────────────────────── */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+.btn-primary:hover {
+  background: var(--brand-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(227,30,36,0.3);
+}
+
+.btn-ghost {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 28px;
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+.btn-ghost:hover {
+  background: rgba(255,255,255,0.1);
+}
