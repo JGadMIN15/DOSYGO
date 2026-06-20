@@ -7,12 +7,12 @@ import { ChevronRight, SlidersHorizontal } from "lucide-react";
 import ProductSort from "@/components/ProductSort";
 
 interface Props {
-  searchParams: Promise<{ categoria?: string; buscar?: string; orden?: string; marca?: string }>;
+  searchParams: Promise<{ buscar?: string; orden?: string; marca?: string }>;
 }
 
 export default async function ProductosPage({ searchParams }: Props) {
   const params = await searchParams;
-  const { categoria, buscar, orden, marca } = params;
+  const { buscar, orden, marca } = params;
 
   const orderBy =
     orden === "precio-asc"  ? { price: "asc"       as const } :
@@ -22,17 +22,10 @@ export default async function ProductosPage({ searchParams }: Props) {
 
   const products = await prisma.product.findMany({
     where: {
-      ...(categoria ? { category: categoria } : {}),
-      ...(buscar    ? { name: { contains: buscar } } : {}),
-      ...(marca     ? { brand: marca } : {}),
+      ...(buscar ? { name: { contains: buscar } } : {}),
+      ...(marca  ? { brand: marca }               : {}),
     },
     orderBy,
-  });
-
-  const allCategories = await prisma.product.groupBy({
-    by: ["category"],
-    _count: { id: true },
-    orderBy: { category: "asc" },
   });
 
   const allBrands = await prisma.product.groupBy({
@@ -49,9 +42,8 @@ export default async function ProductosPage({ searchParams }: Props) {
   ];
 
   const activeFilters = [
-    ...(categoria ? [`Categoría: ${categoria}`] : []),
-    ...(marca     ? [`Marca: ${marca}`]         : []),
-    ...(buscar    ? [`Búsqueda: "${buscar}"`]   : []),
+    ...(marca  ? [`Marca: ${marca}`]       : []),
+    ...(buscar ? [`Búsqueda: "${buscar}"`] : []),
   ];
 
   return (
@@ -63,61 +55,13 @@ export default async function ProductosPage({ searchParams }: Props) {
           <Link href="/" className="hover:text-red-600 transition-colors">Inicio</Link>
           <ChevronRight className="w-3 h-3" />
           <span className="text-gray-700 font-medium">Relojes</span>
-          {categoria && (
-            <>
-              <ChevronRight className="w-3 h-3" />
-              <span className="text-gray-700 font-medium">{categoria}</span>
-            </>
-          )}
-        </nav>
+          </nav>
 
         <div className="flex flex-col lg:flex-row gap-6">
 
           {/* Sidebar */}
           <aside className="lg:w-60 flex-shrink-0">
             <div className="bg-white rounded-xl border border-gray-200 overflow-hidden sticky top-36">
-
-              {/* Categorías */}
-              <div className="border-b border-gray-100">
-                <div className="px-5 py-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-gray-500 mb-3">Tipo de reloj</p>
-                  <ul className="space-y-0.5">
-                    <li>
-                      <Link
-                        href={marca ? `/productos?marca=${encodeURIComponent(marca)}` : "/productos"}
-                        className={`flex items-center justify-between px-2.5 py-2 rounded-lg text-sm transition-colors ${
-                          !categoria ? "font-semibold text-white" : "text-gray-600 hover:bg-gray-50"
-                        }`}
-                        style={!categoria ? { background: "var(--brand)" } : {}}
-                      >
-                        <span>Todos</span>
-                        <span className={`text-xs ${!categoria ? "text-white/70" : "text-gray-400"}`}>
-                          {allCategories.reduce((s, c) => s + c._count.id, 0)}
-                        </span>
-                      </Link>
-                    </li>
-                    {allCategories.map((cat) => {
-                      const href = `/productos?categoria=${encodeURIComponent(cat.category)}${marca ? `&marca=${encodeURIComponent(marca)}` : ""}`;
-                      return (
-                        <li key={cat.category}>
-                          <Link
-                            href={href}
-                            className={`flex items-center justify-between px-2.5 py-2 rounded-lg text-sm transition-colors ${
-                              categoria === cat.category ? "font-semibold text-white" : "text-gray-600 hover:bg-gray-50"
-                            }`}
-                            style={categoria === cat.category ? { background: "var(--brand)" } : {}}
-                          >
-                            <span>{cat.category}</span>
-                            <span className={`text-xs ${categoria === cat.category ? "text-white/70" : "text-gray-400"}`}>
-                              {cat._count.id}
-                            </span>
-                          </Link>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
-              </div>
 
               {/* Marcas */}
               {allBrands.length > 0 && (
@@ -128,8 +72,8 @@ export default async function ProductosPage({ searchParams }: Props) {
                       {allBrands.map((b) => {
                         const isActive = marca === b.brand;
                         const href = isActive
-                          ? (categoria ? `/productos?categoria=${encodeURIComponent(categoria)}` : "/productos")
-                          : `${categoria ? `/productos?categoria=${encodeURIComponent(categoria)}&` : "/productos?"}marca=${encodeURIComponent(b.brand)}`;
+                          ? "/productos"
+                          : `/productos?marca=${encodeURIComponent(b.brand)}`;
                         return (
                           <li key={b.brand}>
                             <Link
@@ -174,7 +118,7 @@ export default async function ProductosPage({ searchParams }: Props) {
               <div className="flex items-center gap-3">
                 <SlidersHorizontal className="w-4 h-4 text-gray-400" />
                 <h1 className="font-bold text-gray-900 text-sm">
-                  {categoria ?? (buscar ? `Resultados para "${buscar}"` : "Todos los relojes")}
+                  {buscar ? `Resultados para "${buscar}"` : "Todos los relojes"}
                 </h1>
                 <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
                   {products.length} {products.length === 1 ? "producto" : "productos"}

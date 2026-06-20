@@ -44,10 +44,6 @@ export default async function ProductPage({ params }: Props) {
           <ChevronRight className="w-3 h-3" />
           <Link href="/productos" className="hover:text-red-600 transition-colors">Relojes</Link>
           <ChevronRight className="w-3 h-3" />
-          <Link href={`/productos?categoria=${encodeURIComponent(product.category)}`} className="hover:text-red-600 transition-colors">
-            {product.category}
-          </Link>
-          <ChevronRight className="w-3 h-3" />
           <span className="text-gray-700 font-medium truncate max-w-[200px]">{product.name}</span>
         </nav>
 

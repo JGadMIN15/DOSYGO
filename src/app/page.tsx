@@ -18,15 +18,6 @@ export default async function HomePage() {
     orderBy: { createdAt: "desc" },
   });
 
-  const categories = [
-    { name: "Cronógrafos",  img: "⏱️", href: "/productos?categoria=Cron%C3%B3grafos", desc: "Precisión al segundo" },
-    { name: "Deportivos",   img: "🏃", href: "/productos?categoria=Deportivos",        desc: "Resistentes y funcionales" },
-    { name: "Clásicos",     img: "🎩", href: "/productos?categoria=Cl%C3%A1sicos",     desc: "Elegancia atemporal" },
-    { name: "Para Ella",    img: "💐", href: "/productos?categoria=Para+Ella",          desc: "Diseños femeninos" },
-    { name: "Minimalistas", img: "✦",  href: "/productos?categoria=Minimalistas",      desc: "Diseño puro" },
-    { name: "Smart",        img: "📱", href: "/productos?categoria=Smart",             desc: "Tecnología al pulso" },
-  ];
-
   const perks = [
     { icon: Truck,     title: "Envío gratis",        desc: "En pedidos +€100" },
     { icon: Shield,    title: "Garantía 2 años",     desc: "En todos los relojes" },
@@ -112,34 +103,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Categories */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
-        <div className="flex items-end justify-between mb-7">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-widest mb-1" style={{ color: "var(--brand)" }}>Colecciones</p>
-            <h2 className="text-2xl font-black text-gray-900">Explora por categoría</h2>
-          </div>
-          <Link href="/productos" className="text-sm font-semibold flex items-center gap-1 hover:underline" style={{ color: "var(--brand)" }}>
-            Ver todo <ChevronRight className="w-4 h-4" />
-          </Link>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {categories.map((cat) => (
-            <Link
-              key={cat.name}
-              href={cat.href}
-              className="group bg-white border border-gray-200 rounded-xl p-4 flex flex-col items-center gap-2.5 hover:border-red-300 hover:shadow-md transition-all text-center"
-            >
-              <span className="text-3xl">{cat.img}</span>
-              <div>
-                <p className="text-sm font-semibold text-gray-800 group-hover:text-red-600 transition-colors">{cat.name}</p>
-                <p className="text-xs text-gray-400 mt-0.5 leading-tight">{cat.desc}</p>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
       {/* Featured products */}
       {featured.length > 0 && (
         <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
@@ -159,41 +122,6 @@ export default async function HomePage() {
           </div>
         </section>
       )}
-
-      {/* Promo banners */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-14">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Banner 1 */}
-          <Link href="/productos?categoria=Cronógrafos" className="group relative rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #1a1a1a 0%, #2d1a1a 100%)", minHeight: 200 }}>
-            <div className="absolute inset-0 opacity-30 group-hover:opacity-40 transition-opacity" style={{ background: "var(--brand)", filter: "blur(60px)" }} />
-            <div className="relative p-8 h-full flex flex-col justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-red-400 mb-2">Colección especial</p>
-                <h3 className="text-2xl font-black text-white mb-2">Cronógrafos</h3>
-                <p className="text-gray-400 text-sm">Precisión al milisegundo</p>
-              </div>
-              <span className="inline-flex items-center gap-1 text-sm font-bold text-red-400 group-hover:gap-2 transition-all">
-                Descubrir <ChevronRight className="w-4 h-4" />
-              </span>
-            </div>
-          </Link>
-
-          {/* Banner 2 */}
-          <Link href="/productos?categoria=Para+Ella" className="group relative rounded-2xl overflow-hidden" style={{ background: "linear-gradient(135deg, #1a1a2d 0%, #1a1a1a 100%)", minHeight: 200 }}>
-            <div className="absolute inset-0 opacity-20 group-hover:opacity-30 transition-opacity" style={{ background: "#4a4ae3", filter: "blur(60px)" }} />
-            <div className="relative p-8 h-full flex flex-col justify-between">
-              <div>
-                <p className="text-xs font-bold uppercase tracking-widest text-blue-400 mb-2">Para ella</p>
-                <h3 className="text-2xl font-black text-white mb-2">Elegancia femenina</h3>
-                <p className="text-gray-400 text-sm">Diseños exclusivos para mujer</p>
-              </div>
-              <span className="inline-flex items-center gap-1 text-sm font-bold text-blue-400 group-hover:gap-2 transition-all">
-                Descubrir <ChevronRight className="w-4 h-4" />
-              </span>
-            </div>
-          </Link>
-        </div>
-      </section>
 
       {/* Newest */}
       {newest.length > 0 && (

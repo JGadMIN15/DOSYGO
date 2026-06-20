@@ -2,19 +2,9 @@
 
 import Link from "next/link";
 import { useCartStore } from "@/lib/store";
-import { ShoppingCart, Search, Menu, X, ChevronDown } from "lucide-react";
+import { ShoppingCart, Search, Menu, X } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
-
-const NAV = [
-  { label: "Todos los relojes", href: "/productos" },
-  { label: "Cronógrafos", href: "/productos?categoria=Cronógrafos" },
-  { label: "Deportivos", href: "/productos?categoria=Deportivos" },
-  { label: "Clásicos", href: "/productos?categoria=Clásicos" },
-  { label: "Para Ella", href: "/productos?categoria=Para+Ella" },
-  { label: "Minimalistas", href: "/productos?categoria=Minimalistas" },
-  { label: "Smart", href: "/productos?categoria=Smart" },
-];
 
 export default function Header() {
   const count = useCartStore((s) => s.count());
@@ -132,37 +122,17 @@ export default function Header() {
         </div>
       </div>
 
-      {/* Category nav — desktop */}
-      <div className="hidden md:block border-b border-gray-100 bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <nav className="flex items-center gap-0 overflow-x-auto scrollbar-hide">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex-shrink-0 px-4 py-3 text-sm font-medium text-gray-600 hover:text-red-600 hover:border-b-2 hover:border-red-600 transition-all whitespace-nowrap border-b-2 border-transparent"
-              >
-                {item.label}
-              </Link>
-            ))}
-          </nav>
-        </div>
-      </div>
-
       {/* Mobile menu */}
       {menuOpen && (
         <div className="md:hidden border-t border-gray-100 bg-white shadow-lg">
           <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-1">
-            {NAV.map((item) => (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-gray-50 rounded-lg transition-colors"
-                onClick={() => setMenuOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
+            <Link
+              href="/productos"
+              className="px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-gray-50 rounded-lg transition-colors"
+              onClick={() => setMenuOpen(false)}
+            >
+              Todos los relojes
+            </Link>
           </div>
         </div>
       )}
