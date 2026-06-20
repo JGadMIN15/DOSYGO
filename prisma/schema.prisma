@@ -1,0 +1,62 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Product {
+  id            String      @id @default(cuid())
+  name          String
+  description   String
+  price         Float
+  images        String
+  category      String
+  brand         String
+  stock         Int         @default(0)
+  featured      Boolean     @default(false)
+  stripePriceId String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  orderItems    OrderItem[]
+}
+
+model Order {
+  id                String             @id @default(cuid())
+  stripeSessionId   String?            @unique
+  stripePaymentId   String?
+  status            String             @default("pending")
+  total             Float
+  currency          String             @default("eur")
+  customerName      String
+  customerEmail     String
+  shippingAddress   String
+  trackingCode      String?
+  estimatedDelivery DateTime?
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  items             OrderItem[]
+  tracking          ShipmentTracking[]
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Float
+  order     Order   @relation(fields: [orderId], references: [id])
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model ShipmentTracking {
+  id          String   @id @default(cuid())
+  orderId     String
+  status      String
+  description String
+  location    String?
+  timestamp   DateTime @default(now())
+  order       Order    @relation(fields: [orderId], references: [id])
+}
