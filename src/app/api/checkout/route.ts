@@ -57,7 +57,8 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/[^\x00-\x7F]/g, "").trim();
+    console.log("appUrl:", JSON.stringify(appUrl));
     const subtotal = items.reduce((sum, item) => {
       const db = dbProducts.find((p) => p.id === item.id)!;
       return sum + db.price * item.quantity;
