@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Mail, Phone, MapPin, Share2, Globe } from "lucide-react";
+import { Mail, MapPin, Share2, Globe } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -91,13 +91,9 @@ export default function Footer() {
                 <Mail className="w-4 h-4 flex-shrink-0" style={{ color: "var(--gold)" }} />
                 info@dosandgo.com
               </li>
-              <li className="flex items-center gap-3 text-sm" style={{ color: "#9ca3af" }}>
-                <Phone className="w-4 h-4 flex-shrink-0" style={{ color: "var(--gold)" }} />
-                +34 900 123 456
-              </li>
               <li className="flex items-start gap-3 text-sm" style={{ color: "#9ca3af" }}>
                 <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: "var(--gold)" }} />
-                Calle Gran Vía 28, Madrid, España
+                Cristobal de Morales n42
               </li>
             </ul>
           </div>
