@@ -161,7 +161,7 @@ export default function CartPage() {
               </div>
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <Truck className="w-3.5 h-3.5" style={{ color: "var(--brand)" }} />
-                Entrega estimada: 2-3 días hábiles
+                Entrega estimada: hasta 14 días hábiles
               </div>
             </div>
 

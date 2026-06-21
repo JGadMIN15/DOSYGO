@@ -119,12 +119,9 @@ export default function WatchCard({ product }: { product: Product }) {
           <h3 className="text-sm font-medium text-gray-800 leading-snug line-clamp-2 group-hover:text-red-700 transition-colors duration-200 min-h-[2.5rem] mb-4">
             {product.name}
           </h3>
-          <div className="flex items-center justify-between">
-            <p className="text-xl font-bold text-gray-900 tracking-tight font-sans">
-              {priceFormatted}
-            </p>
-            <span className="text-[10px] text-gray-400 tracking-wide uppercase">IVA incl.</span>
-          </div>
+          <p className="text-xl font-bold text-gray-900 tracking-tight font-sans">
+            {priceFormatted}
+          </p>
         </div>
       </article>
     </Link>
