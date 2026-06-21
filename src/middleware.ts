@@ -39,5 +39,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/api/checkout"],
+  matcher: ["/_disabled_middleware_"],
 };
