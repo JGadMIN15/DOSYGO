@@ -97,7 +97,7 @@ export async function POST(req: NextRequest) {
               amount: subtotal >= 100 ? 0 : 500,
               currency: "eur",
             },
-            display_name: "Envío estándar Europa",
+            display_name: "Envio estandar Europa",
             delivery_estimate: {
               minimum: { unit: "business_day", value: 2 },
               maximum: { unit: "business_day", value: 14 },
