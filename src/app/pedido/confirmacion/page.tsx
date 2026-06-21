@@ -1,4 +1,4 @@
-import { stripe } from "@/lib/stripe";
+import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { CheckCircle, Package, Truck, Home, ChevronRight, MapPin } from "lucide-react";
@@ -24,7 +24,7 @@ export default async function ConfirmationPage({ searchParams }: Props) {
   let order;
 
   try {
-    session = await stripe.checkout.sessions.retrieve(session_id, {
+    session = await getStripe().checkout.sessions.retrieve(session_id, {
       expand: ["line_items"],
     });
 
