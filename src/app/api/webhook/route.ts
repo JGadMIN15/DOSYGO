@@ -89,6 +89,11 @@ export async function POST(req: NextRequest) {
   //     authoritative idempotency guard against the check-then-create race
   //     (two concurrent deliveries). On any other (transient) failure we return
   //     500 so Stripe retries instead of silently losing a paid order. ---
+  // The Neon HTTP adapter does NOT support transactions, and nested writes
+  // (order + items + tracking in a single create) require one. So persist the
+  // order flat, then insert items/tracking with createMany (single multi-row
+  // INSERTs, no transaction needed).
+  let orderId: string;
   try {
     const order = await prisma.order.create({
       data: {
@@ -102,32 +107,9 @@ export async function POST(req: NextRequest) {
         shippingAddress,
         trackingCode,
         estimatedDelivery,
-        items: {
-          create: itemsMeta.map((item) => ({
-            productId: item.id,
-            quantity: item.qty,
-            price: item.price,
-          })),
-        },
-        tracking: {
-          create: [
-            {
-              status: "confirmed",
-              description: "Pedido confirmado y pago recibido",
-              location: "Madrid, España",
-            },
-            {
-              status: "processing",
-              description: "Tu pedido está siendo preparado en nuestro almacén",
-              location: "Madrid, España",
-              timestamp: new Date(Date.now() + 2 * 60 * 60 * 1000),
-            },
-          ],
-        },
       },
     });
-
-    console.log("Order created:", order.id, trackingCode);
+    orderId = order.id;
   } catch (err) {
     // Concurrent duplicate delivery won the unique-constraint race: already handled.
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
@@ -137,6 +119,41 @@ export async function POST(req: NextRequest) {
     // 500 -> Stripe retries the delivery (avoids silently dropping a paid order).
     return NextResponse.json({ error: "Order processing failed" }, { status: 500 });
   }
+
+  // Line items + tracking timeline (no nested writes -> no transaction).
+  try {
+    if (itemsMeta.length > 0) {
+      await prisma.orderItem.createMany({
+        data: itemsMeta.map((item) => ({
+          orderId,
+          productId: item.id,
+          quantity: item.qty,
+          price: item.price,
+        })),
+      });
+    }
+    await prisma.shipmentTracking.createMany({
+      data: [
+        {
+          orderId,
+          status: "confirmed",
+          description: "Pedido confirmado y pago recibido",
+          location: "Madrid, España",
+        },
+        {
+          orderId,
+          status: "processing",
+          description: "Tu pedido está siendo preparado en nuestro almacén",
+          location: "Madrid, España",
+          timestamp: new Date(Date.now() + 2 * 60 * 60 * 1000),
+        },
+      ],
+    });
+  } catch (err) {
+    console.error("Order created but items/tracking insert failed:", trackingCode, err);
+  }
+
+  console.log("Order created:", orderId, trackingCode);
 
   // --- Decrement stock now that the order is durably persisted. Best-effort:
   //     the paid order is the source of truth, so a stock-update failure must
