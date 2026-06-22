@@ -33,6 +33,7 @@ export default function ProductForm({
   const [images, setImages] = useState<string[]>(product?.images ?? []);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
+  const [urlInput, setUrlInput] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function handleFiles(files: FileList | null) {
@@ -60,6 +61,18 @@ export default function ProductForm({
 
   function removeImage(url: string) {
     setImages((prev) => prev.filter((u) => u !== url));
+  }
+
+  function addImageUrl() {
+    const url = urlInput.trim();
+    if (!url) return;
+    if (!/^https:\/\//i.test(url) && !url.startsWith("/productos/")) {
+      setUploadError("La URL debe empezar por https://");
+      return;
+    }
+    setUploadError(null);
+    setImages((prev) => (prev.length >= 10 ? prev : [...prev, url]));
+    setUrlInput("");
   }
 
   return (
@@ -221,6 +234,34 @@ export default function ProductForm({
         {uploadError && <p className="text-xs text-red-600 mt-1">{uploadError}</p>}
         <p className="text-xs text-gray-400 mt-1">
           JPG, PNG, WEBP o AVIF · máx. 5 MB por imagen.
+        </p>
+
+        <div className="mt-3 flex gap-2">
+          <input
+            type="url"
+            value={urlInput}
+            onChange={(e) => setUrlInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                addImageUrl();
+              }
+            }}
+            placeholder="…o pega la URL de una imagen (https://…)"
+            className="flex-1 rounded-lg border border-gray-300 px-3.5 py-2 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+          />
+          <button
+            type="button"
+            onClick={addImageUrl}
+            disabled={images.length >= 10}
+            className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-60"
+          >
+            Añadir
+          </button>
+        </div>
+        <p className="text-xs text-gray-400 mt-1">
+          ¿La subida de archivos no funciona todavía? Pega aquí el enlace de una
+          imagen ya alojada en internet (debe empezar por https://).
         </p>
       </div>
 

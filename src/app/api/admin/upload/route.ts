@@ -18,13 +18,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
-    return NextResponse.json(
-      { error: "Almacenamiento de imágenes no configurado" },
-      { status: 500 }
-    );
-  }
-
   const form = await req.formData();
   const file = form.get("file");
   if (!(file instanceof File)) {
@@ -43,15 +36,25 @@ export async function POST(req: NextRequest) {
   const ext = file.type === "image/jpeg" ? "jpg" : file.type.split("/")[1];
   const key = `productos/${randomUUID()}.${ext}`;
 
+  // On Vercel, a Blob store connected via OIDC authenticates automatically (no
+  // static token needed). If BLOB_READ_WRITE_TOKEN is set, use it instead.
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+
   try {
     const blob = await put(key, file, {
       access: "public",
-      token: process.env.BLOB_READ_WRITE_TOKEN,
       contentType: file.type,
+      ...(token ? { token } : {}),
     });
     return NextResponse.json({ url: blob.url });
   } catch (err) {
     console.error("Blob upload error:", err);
-    return NextResponse.json({ error: "Error al subir la imagen" }, { status: 500 });
+    return NextResponse.json(
+      {
+        error:
+          "No se pudo subir la imagen. Si el problema persiste, usa el campo de URL de imagen.",
+      },
+      { status: 500 }
+    );
   }
 }
