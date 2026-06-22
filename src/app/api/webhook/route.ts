@@ -163,37 +163,26 @@ export async function POST(req: NextRequest) {
 
   console.log("Order created:", orderId, trackingCode);
 
-  // --- Decrement stock now that the order is durably persisted. Best-effort:
-  //     the paid order is the source of truth, so a stock-update failure must
-  //     NOT bounce the webhook (that would never re-decrement, only duplicate).
-  //     NOTE: not atomic with order creation — the Neon HTTP adapter rejects
-  //     transactions. To make this atomic, switch src/lib/prisma.ts to the
-  //     WebSocket adapter (PrismaNeon). See hardening notes. ---
-  try {
-    await Promise.all(
-      itemsMeta
-        .filter((i) => i.id && Number.isInteger(i.qty) && i.qty > 0)
-        .map(async (i) => {
-          // Conditional decrement: only succeeds while enough stock remains, so
-          // stock can never go negative even if two buyers pay for the last
-          // unit at the same time.
-          const res = await prisma.product.updateMany({
-            where: { id: i.id, stock: { gte: i.qty } },
-            data: { stock: { decrement: i.qty } },
-          });
-          if (res.count === 0) {
-            console.error(
-              `Oversell: not enough stock for product ${i.id} (qty ${i.qty}) on order ${trackingCode}. Needs manual review/refund.`
-            );
-          }
-        })
-    );
-  } catch (err) {
-    console.error(
-      "Stock decrement failed (order created, reconcile manually):",
-      trackingCode,
-      err
-    );
+  // --- Decrement stock. Use a raw, single-statement conditional UPDATE: it is
+  //     atomic (stock never goes below 0, even with concurrent checkouts of the
+  //     last unit) and works over the Neon HTTP adapter, which rejects
+  //     updateMany/transactions. Best-effort: a failure must not bounce the
+  //     webhook (the paid order is the source of truth). ---
+  for (const i of itemsMeta) {
+    if (!i.id || !Number.isInteger(i.qty) || i.qty <= 0) continue;
+    try {
+      const rows = await prisma.$executeRaw`
+        UPDATE "Product" SET stock = stock - ${i.qty}
+        WHERE id = ${i.id} AND stock >= ${i.qty}
+      `;
+      if (rows === 0) {
+        console.error(
+          `Oversell: not enough stock for product ${i.id} (qty ${i.qty}) on order ${trackingCode}. Needs manual review/refund.`
+        );
+      }
+    } catch (err) {
+      console.error("Stock decrement failed:", trackingCode, i.id, err);
+    }
   }
 
   return NextResponse.json({ received: true });
