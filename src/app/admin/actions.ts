@@ -23,7 +23,26 @@ async function clientIp(): Promise<string> {
   return h.get("x-real-ip") ?? "unknown";
 }
 
+// Audit trail. Best-effort: a logging failure must never block the action.
+async function logAudit(entry: {
+  adminEmail: string;
+  action: string;
+  targetType?: string;
+  targetId?: string;
+  detail?: string;
+  ip?: string;
+}): Promise<void> {
+  try {
+    await prisma.auditLog.create({ data: entry });
+  } catch (err) {
+    console.error("Audit log failed:", err);
+  }
+}
+
 // --- Authentication ---------------------------------------------------------
+
+const MAX_FAILED_LOGINS = 5;
+const LOCK_MINUTES = 15;
 
 export async function loginAction(
   _prev: ActionState,
@@ -45,6 +64,15 @@ export async function loginAction(
   }
 
   const user = await prisma.adminUser.findUnique({ where: { email } });
+
+  // Account lockout: block while the cooldown is active.
+  if (user?.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
+    await logAudit({ adminEmail: email, action: "login_failed", detail: "locked", ip });
+    return {
+      error: "Cuenta bloqueada temporalmente por seguridad. Inténtalo más tarde.",
+    };
+  }
+
   // Run a verify even when the user is missing to flatten timing differences
   // and avoid leaking which emails exist.
   const ok = user
@@ -52,9 +80,32 @@ export async function loginAction(
     : verifyPassword(password, "scrypt$00$00");
 
   if (!user || !ok) {
+    if (user) {
+      const attempts = user.failedLoginAttempts + 1;
+      const shouldLock = attempts >= MAX_FAILED_LOGINS;
+      await prisma.adminUser.update({
+        where: { id: user.id },
+        data: {
+          failedLoginAttempts: shouldLock ? 0 : attempts,
+          lockedUntil: shouldLock
+            ? new Date(Date.now() + LOCK_MINUTES * 60_000)
+            : null,
+        },
+      });
+    }
+    await logAudit({ adminEmail: email, action: "login_failed", ip });
     return { error: "Credenciales incorrectas." };
   }
 
+  // Success: clear any failure counters.
+  if (user.failedLoginAttempts !== 0 || user.lockedUntil) {
+    await prisma.adminUser.update({
+      where: { id: user.id },
+      data: { failedLoginAttempts: 0, lockedUntil: null },
+    });
+  }
+
+  await logAudit({ adminEmail: user.email, action: "login_success", ip });
   await setAdminSession({ id: user.id, email: user.email, role: user.role });
   redirect("/admin");
 }
@@ -154,12 +205,20 @@ export async function createProduct(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const parsed = parseProductForm(formData);
   if ("error" in parsed) return { error: parsed.error };
 
-  await prisma.product.create({ data: parsed.data });
+  const product = await prisma.product.create({ data: parsed.data });
+  await logAudit({
+    adminEmail: session.email,
+    action: "product_create",
+    targetType: "product",
+    targetId: product.id,
+    detail: product.name,
+    ip: await clientIp(),
+  });
   revalidatePath("/productos");
   revalidatePath("/admin");
   redirect("/admin");
@@ -169,7 +228,7 @@ export async function updateProduct(
   _prev: ActionState,
   formData: FormData
 ): Promise<ActionState> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
   if (!CUID_RE.test(id)) return { error: "Identificador de producto no válido." };
@@ -178,6 +237,14 @@ export async function updateProduct(
   if ("error" in parsed) return { error: parsed.error };
 
   await prisma.product.update({ where: { id }, data: parsed.data });
+  await logAudit({
+    adminEmail: session.email,
+    action: "product_update",
+    targetType: "product",
+    targetId: id,
+    detail: parsed.data.name,
+    ip: await clientIp(),
+  });
   revalidatePath("/productos");
   revalidatePath(`/productos/${id}`);
   revalidatePath("/admin");
@@ -185,13 +252,20 @@ export async function updateProduct(
 }
 
 export async function deleteProduct(formData: FormData): Promise<void> {
-  await requireAdmin();
+  const session = await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
   if (!CUID_RE.test(id)) redirect("/admin");
 
   try {
     await prisma.product.delete({ where: { id } });
+    await logAudit({
+      adminEmail: session.email,
+      action: "product_delete",
+      targetType: "product",
+      targetId: id,
+      ip: await clientIp(),
+    });
   } catch {
     // A product referenced by existing orders cannot be hard-deleted (FK
     // restrict). Left in place; a soft-delete flag could be added later.
