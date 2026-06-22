@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
         currency: session.currency ?? "eur",
         customerName: session.customer_details?.name ?? "Cliente",
         customerEmail: session.customer_details?.email ?? "",
-        customerPhone: session.customer_details?.phone ?? null,
+        customerPhone: session.metadata?.phone ?? session.customer_details?.phone ?? null,
         shippingAddress,
         trackingCode,
         estimatedDelivery,

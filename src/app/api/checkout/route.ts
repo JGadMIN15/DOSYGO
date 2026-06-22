@@ -46,6 +46,13 @@ export async function POST(req: NextRequest) {
       return { id: String(item.id), quantity: qty };
     });
 
+    // --- Require a valid contact phone (also enforced in the cart UI) ---
+    const phone = String(body.phone ?? "").trim();
+    const phoneDigits = phone.replace(/\D/g, "");
+    if (phoneDigits.length < 9 || phoneDigits.length > 15) {
+      throw new CheckoutError("Teléfono no válido");
+    }
+
     // --- Fetch authoritative prices from DB (prevents client-side price tampering) ---
     const productIds = [...new Set(items.map((i) => i.id))];
     const dbProducts = await prisma.product.findMany({
@@ -93,7 +100,6 @@ export async function POST(req: NextRequest) {
       payment_method_types: ["card"],
       mode: "payment",
       line_items: lineItems,
-      phone_number_collection: { enabled: true },
       shipping_address_collection: {
         allowed_countries: [
           "ES", "PT", "FR", "DE", "IT", "GB", "NL", "BE", "AT", "CH",
@@ -120,6 +126,7 @@ export async function POST(req: NextRequest) {
       success_url: `${appUrl}/pedido/confirmacion?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/carrito`,
       metadata: {
+        phone,
         items: JSON.stringify(items.map((i) => ({
           id: i.id,
           qty: i.quantity,

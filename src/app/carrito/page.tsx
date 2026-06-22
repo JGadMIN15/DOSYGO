@@ -10,15 +10,19 @@ export default function CartPage() {
   const { items, removeItem, updateQuantity, total, count } = useCartStore();
   const [loading, setLoading] = useState(false);
   const [accepted, setAccepted] = useState(false);
+  const [phone, setPhone] = useState("");
+
+  const phoneDigits = phone.replace(/\D/g, "");
+  const phoneValid = phoneDigits.length >= 9 && phoneDigits.length <= 15;
 
   const handleCheckout = async () => {
-    if (items.length === 0 || !accepted) return;
+    if (items.length === 0 || !accepted || !phoneValid) return;
     setLoading(true);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items }),
+        body: JSON.stringify({ items, phone: phone.trim() }),
       });
       const data = await res.json();
       if (data.url) {
@@ -134,6 +138,30 @@ export default function CartPage() {
               </div>
             </div>
 
+            <div className="mb-4">
+              <label htmlFor="phone" className="block text-xs font-medium text-gray-700 mb-1">
+                Teléfono de contacto
+              </label>
+              <input
+                id="phone"
+                type="tel"
+                inputMode="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="+34 600 000 000"
+                className={`w-full rounded-xl border px-3.5 py-2.5 text-sm outline-none focus:ring-1 ${
+                  phone && !phoneValid
+                    ? "border-red-400 focus:border-red-500 focus:ring-red-500"
+                    : "border-gray-300 focus:border-gray-900 focus:ring-gray-900"
+                }`}
+              />
+              {phone && !phoneValid && (
+                <p className="text-xs text-red-600 mt-1">
+                  Introduce un teléfono válido (9–15 dígitos).
+                </p>
+              )}
+            </div>
+
             <label className="flex items-start gap-2 mb-4 text-xs text-gray-600">
               <input
                 type="checkbox"
@@ -156,7 +184,7 @@ export default function CartPage() {
 
             <button
               onClick={handleCheckout}
-              disabled={loading || !accepted}
+              disabled={loading || !accepted || !phoneValid}
               className="w-full py-4 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
               style={{ background: "var(--brand)" }}
             >
