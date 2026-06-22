@@ -11,6 +11,7 @@ import {
   requireAdmin,
 } from "@/lib/admin-session";
 import { rateLimit } from "@/lib/rate-limit";
+import { syncProductToStripe, archiveStripeProduct } from "@/lib/stripe-sync";
 
 export interface ActionState {
   error?: string;
@@ -256,6 +257,25 @@ function parseProductForm(
   };
 }
 
+// Mirror a product to Stripe and persist the returned ids. Non-fatal: a Stripe
+// outage or misconfigured key must never block managing the catalog.
+async function syncProductRecord(product: {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  images: string;
+  stripeProductId: string | null;
+  stripePriceId: string | null;
+}): Promise<void> {
+  try {
+    const ids = await syncProductToStripe(product);
+    await prisma.product.update({ where: { id: product.id }, data: ids });
+  } catch (err) {
+    console.error("Stripe product sync failed (product saved in DB):", err);
+  }
+}
+
 export async function createProduct(
   _prev: ActionState,
   formData: FormData
@@ -266,6 +286,7 @@ export async function createProduct(
   if ("error" in parsed) return { error: parsed.error };
 
   const product = await prisma.product.create({ data: parsed.data });
+  await syncProductRecord(product);
   await logAudit({
     adminEmail: session.email,
     action: "product_create",
@@ -291,7 +312,8 @@ export async function updateProduct(
   const parsed = parseProductForm(formData);
   if ("error" in parsed) return { error: parsed.error };
 
-  await prisma.product.update({ where: { id }, data: parsed.data });
+  const product = await prisma.product.update({ where: { id }, data: parsed.data });
+  await syncProductRecord(product);
   await logAudit({
     adminEmail: session.email,
     action: "product_update",
@@ -312,8 +334,20 @@ export async function deleteProduct(formData: FormData): Promise<void> {
   const id = String(formData.get("id") ?? "");
   if (!CUID_RE.test(id)) redirect("/admin");
 
+  const existing = await prisma.product.findUnique({
+    where: { id },
+    select: { stripeProductId: true },
+  });
+
   try {
     await prisma.product.delete({ where: { id } });
+    if (existing?.stripeProductId) {
+      try {
+        await archiveStripeProduct(existing.stripeProductId);
+      } catch (err) {
+        console.error("Stripe archive failed:", err);
+      }
+    }
     await logAudit({
       adminEmail: session.email,
       action: "product_delete",

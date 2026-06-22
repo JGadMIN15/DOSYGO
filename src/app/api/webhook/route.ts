@@ -148,12 +148,20 @@ export async function POST(req: NextRequest) {
     await Promise.all(
       itemsMeta
         .filter((i) => i.id && Number.isInteger(i.qty) && i.qty > 0)
-        .map((i) =>
-          prisma.product.update({
-            where: { id: i.id },
+        .map(async (i) => {
+          // Conditional decrement: only succeeds while enough stock remains, so
+          // stock can never go negative even if two buyers pay for the last
+          // unit at the same time.
+          const res = await prisma.product.updateMany({
+            where: { id: i.id, stock: { gte: i.qty } },
             data: { stock: { decrement: i.qty } },
-          })
-        )
+          });
+          if (res.count === 0) {
+            console.error(
+              `Oversell: not enough stock for product ${i.id} (qty ${i.qty}) on order ${trackingCode}. Needs manual review/refund.`
+            );
+          }
+        })
     );
   } catch (err) {
     console.error(
