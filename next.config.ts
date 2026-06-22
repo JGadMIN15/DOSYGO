@@ -5,7 +5,7 @@ const csp = [
   "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://js.stripe.com https://m.stripe.network",
   "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
   "font-src 'self' data: https://fonts.gstatic.com",
-  "img-src 'self' data: blob: https://*.stripe.com",
+  "img-src 'self' data: blob: https://*.stripe.com https://*.public.blob.vercel-storage.com",
   "frame-src https://js.stripe.com https://hooks.stripe.com",
   "connect-src 'self' https://api.stripe.com https://m.stripe.network https://q.stripe.com",
   "object-src 'none'",
@@ -32,6 +32,9 @@ const nextConfig: NextConfig = {
       { pathname: "/productos/**" },
       { pathname: "/*.jpeg" },
       { pathname: "/*.png" },
+    ],
+    remotePatterns: [
+      { protocol: "https", hostname: "**.public.blob.vercel-storage.com" },
     ],
   },
   async headers() {

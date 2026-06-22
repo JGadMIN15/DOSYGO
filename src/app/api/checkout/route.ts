@@ -7,6 +7,17 @@ interface CartItem {
   quantity: number;
 }
 
+// Client-safe error: its message may be returned to the caller with `status`.
+// Anything that is NOT a CheckoutError is treated as unexpected and reported
+// with a generic 500 so internal details are never leaked to the client.
+class CheckoutError extends Error {
+  status: number;
+  constructor(message: string, status = 400) {
+    super(message);
+    this.status = status;
+  }
+}
+
 function isValidCuid(id: string) {
   return typeof id === "string" && /^c[a-z0-9]{24,}$/i.test(id);
 }
@@ -26,11 +37,11 @@ export async function POST(req: NextRequest) {
 
     const items: CartItem[] = body.items.map((item: Record<string, unknown>) => {
       if (!isValidCuid(String(item.id ?? ""))) {
-        throw new Error("ID de producto no válido");
+        throw new CheckoutError("ID de producto no válido");
       }
       const qty = Number(item.quantity);
       if (!Number.isInteger(qty) || qty < 1 || qty > 99) {
-        throw new Error("Cantidad no válida");
+        throw new CheckoutError("Cantidad no válida");
       }
       return { id: String(item.id), quantity: qty };
     });
@@ -118,8 +129,16 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ url: session.url, sessionId: session.id });
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Error al crear sesión";
+    // Known validation errors: safe to surface to the client.
+    if (err instanceof CheckoutError) {
+      return NextResponse.json({ error: err.message }, { status: err.status });
+    }
+    // Unexpected errors: log the detail server-side, return a generic message
+    // so we never leak internals (DB/Stripe error text, stack hints, etc.).
     console.error("Checkout error:", err);
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: "No se pudo crear la sesión de pago" },
+      { status: 500 }
+    );
   }
 }

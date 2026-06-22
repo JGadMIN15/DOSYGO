@@ -1,14 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
+// Tracking codes are "DYG" + 9 crypto-random base36 chars (see webhook route).
+// Validate the shape before querying so malformed/enumeration probes never
+// reach the database.
+const TRACKING_CODE_RE = /^DYG[A-Z0-9]{9}$/;
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ code: string }> }
 ) {
-  const { code } = await params;
+  const { code: rawCode } = await params;
+  const code = rawCode.toUpperCase();
+
+  if (!TRACKING_CODE_RE.test(code)) {
+    return NextResponse.json({ error: "Código no válido" }, { status: 400 });
+  }
 
   const order = await prisma.order.findFirst({
-    where: { trackingCode: code.toUpperCase() },
+    where: { trackingCode: code },
     include: {
       tracking: { orderBy: { timestamp: "asc" } },
       items: { include: { product: true } },

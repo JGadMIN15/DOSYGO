@@ -1,9 +1,15 @@
+import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { Pool } from "pg";
 
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error("DATABASE_URL is not set (define it in .env)");
+}
+
 const pool = new Pool({
-  connectionString: "postgresql://neondb_owner:npg_94vpuGrycFEw@ep-bold-leaf-ajask39f.c-3.us-east-2.aws.neon.tech/neondb?sslmode=require",
+  connectionString,
   ssl: { rejectUnauthorized: false },
 });
 
