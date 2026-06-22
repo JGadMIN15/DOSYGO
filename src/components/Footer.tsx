@@ -68,13 +68,21 @@ export default function Footer() {
               Ayuda
             </h3>
             <ul className="space-y-3">
-              {["Política de envíos", "Devoluciones", "Garantía", "Preguntas frecuentes", "Seguimiento de pedido"].map((item) => (
-                <li key={item}>
-                  <span className="text-sm cursor-pointer transition-colors hover:text-white" style={{ color: "#9ca3af" }}>
-                    {item}
-                  </span>
-                </li>
-              ))}
+              <li>
+                <Link href="/legal/devoluciones" className="text-sm transition-colors hover:text-white" style={{ color: "#9ca3af" }}>
+                  Envíos y devoluciones
+                </Link>
+              </li>
+              <li>
+                <Link href="/legal/terminos" className="text-sm transition-colors hover:text-white" style={{ color: "#9ca3af" }}>
+                  Garantía
+                </Link>
+              </li>
+              <li>
+                <Link href="/legal/terminos" className="text-sm transition-colors hover:text-white" style={{ color: "#9ca3af" }}>
+                  Términos y condiciones
+                </Link>
+              </li>
             </ul>
           </div>
 
@@ -106,6 +114,12 @@ export default function Footer() {
           <p className="text-xs" style={{ color: "#6b7280" }}>
             © 2026 Dos&amp;Go Relojes. Todos los derechos reservados.
           </p>
+          <nav className="flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-xs" style={{ color: "#6b7280" }}>
+            <Link href="/legal/aviso-legal" className="hover:text-white transition-colors">Aviso legal</Link>
+            <Link href="/legal/privacidad" className="hover:text-white transition-colors">Privacidad</Link>
+            <Link href="/legal/cookies" className="hover:text-white transition-colors">Cookies</Link>
+            <Link href="/legal/terminos" className="hover:text-white transition-colors">Términos</Link>
+          </nav>
           <div className="flex items-center gap-4">
             <span className="text-xs" style={{ color: "#6b7280" }}>Pagos seguros con</span>
             <span className="font-bold text-sm text-white">Stripe</span>

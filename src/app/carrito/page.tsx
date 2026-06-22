@@ -5,15 +5,14 @@ import WatchImage from "@/components/WatchImage";
 import Link from "next/link";
 import { Trash2, ShoppingBag, ChevronRight, Shield, Truck } from "lucide-react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, total, count } = useCartStore();
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [accepted, setAccepted] = useState(false);
 
   const handleCheckout = async () => {
-    if (items.length === 0) return;
+    if (items.length === 0 || !accepted) return;
     setLoading(true);
     try {
       const res = await fetch("/api/checkout", {
@@ -135,9 +134,29 @@ export default function CartPage() {
               </div>
             </div>
 
+            <label className="flex items-start gap-2 mb-4 text-xs text-gray-600">
+              <input
+                type="checkbox"
+                checked={accepted}
+                onChange={(e) => setAccepted(e.target.checked)}
+                className="mt-0.5 h-4 w-4 rounded border-gray-300 flex-shrink-0"
+              />
+              <span>
+                He leído y acepto los{" "}
+                <Link href="/legal/terminos" className="underline" style={{ color: "var(--brand)" }}>
+                  Términos y condiciones
+                </Link>{" "}
+                y la{" "}
+                <Link href="/legal/privacidad" className="underline" style={{ color: "var(--brand)" }}>
+                  Política de privacidad
+                </Link>
+                .
+              </span>
+            </label>
+
             <button
               onClick={handleCheckout}
-              disabled={loading}
+              disabled={loading || !accepted}
               className="w-full py-4 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
               style={{ background: "var(--brand)" }}
             >
