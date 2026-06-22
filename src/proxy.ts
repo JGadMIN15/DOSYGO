@@ -57,10 +57,13 @@ export function proxy(req: NextRequest): NextResponse {
 
     const origin = req.headers.get("origin");
 
-    // In production enforce same-origin
+    // In production, block cross-origin POSTs (CSRF). Allow the site's own
+    // origin (whatever domain it is served from) plus any explicitly
+    // allow-listed origins.
     if (
       process.env.NODE_ENV === "production" &&
       origin &&
+      origin !== req.nextUrl.origin &&
       !ALLOWED_ORIGINS.has(origin)
     ) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
