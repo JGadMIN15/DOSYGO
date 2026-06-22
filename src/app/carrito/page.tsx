@@ -12,23 +12,79 @@ export default function CartPage() {
   const [accepted, setAccepted] = useState(false);
   const [phone, setPhone] = useState("");
 
+  const [email, setEmail] = useState("");
+  const [codeSent, setCodeSent] = useState(false);
+  const [code, setCode] = useState("");
+  const [emailVerified, setEmailVerified] = useState(false);
+  const [otpLoading, setOtpLoading] = useState(false);
+  const [otpMsg, setOtpMsg] = useState<string | null>(null);
+
   const phoneDigits = phone.replace(/\D/g, "");
   const phoneValid = phoneDigits.length >= 9 && phoneDigits.length <= 15;
+  const emailValid = /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim());
+
+  const sendCode = async () => {
+    if (!emailValid) return;
+    setOtpLoading(true);
+    setOtpMsg(null);
+    try {
+      const res = await fetch("/api/email/send", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCodeSent(true);
+        setOtpMsg("Te hemos enviado un código a tu email.");
+      } else {
+        setOtpMsg(data.error ?? "No se pudo enviar el código.");
+      }
+    } catch {
+      setOtpMsg("Error de conexión.");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const verifyCode = async () => {
+    if (code.trim().length < 4) return;
+    setOtpLoading(true);
+    setOtpMsg(null);
+    try {
+      const res = await fetch("/api/email/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), code: code.trim() }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setEmailVerified(true);
+        setOtpMsg(null);
+      } else {
+        setOtpMsg(data.error ?? "Código incorrecto.");
+      }
+    } catch {
+      setOtpMsg("Error de conexión.");
+    } finally {
+      setOtpLoading(false);
+    }
+  };
 
   const handleCheckout = async () => {
-    if (items.length === 0 || !accepted || !phoneValid) return;
+    if (items.length === 0 || !accepted || !phoneValid || !emailVerified) return;
     setLoading(true);
     try {
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, phone: phone.trim() }),
+        body: JSON.stringify({ items, phone: phone.trim(), email: email.trim() }),
       });
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert("Error al procesar el pago. Inténtalo de nuevo.");
+        alert(data.error ?? "Error al procesar el pago. Inténtalo de nuevo.");
       }
     } catch {
       alert("Error de conexión. Inténtalo de nuevo.");
@@ -138,6 +194,64 @@ export default function CartPage() {
               </div>
             </div>
 
+            {/* Email + verificación por código */}
+            <div className="mb-4">
+              <label htmlFor="email" className="block text-xs font-medium text-gray-700 mb-1">
+                Email
+              </label>
+              <div className="flex gap-2">
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setEmailVerified(false);
+                    setCodeSent(false);
+                  }}
+                  disabled={emailVerified}
+                  placeholder="tucorreo@email.com"
+                  className="flex-1 rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:bg-gray-50"
+                />
+                {!emailVerified && (
+                  <button
+                    type="button"
+                    onClick={sendCode}
+                    disabled={!emailValid || otpLoading}
+                    className="rounded-xl border border-gray-300 px-3 py-2.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 whitespace-nowrap"
+                  >
+                    {codeSent ? "Reenviar" : "Enviar código"}
+                  </button>
+                )}
+              </div>
+
+              {emailVerified ? (
+                <p className="text-xs text-green-600 mt-1 font-medium">✓ Email verificado</p>
+              ) : codeSent ? (
+                <div className="flex gap-2 mt-2">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder="Código de 6 dígitos"
+                    className="flex-1 rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+                  />
+                  <button
+                    type="button"
+                    onClick={verifyCode}
+                    disabled={otpLoading || code.trim().length < 4}
+                    className="rounded-xl px-4 py-2.5 text-xs font-semibold text-white disabled:opacity-50"
+                    style={{ background: "var(--brand)" }}
+                  >
+                    Verificar
+                  </button>
+                </div>
+              ) : null}
+
+              {otpMsg && <p className="text-xs text-gray-500 mt-1">{otpMsg}</p>}
+            </div>
+
             <div className="mb-4">
               <label htmlFor="phone" className="block text-xs font-medium text-gray-700 mb-1">
                 Teléfono de contacto
@@ -184,7 +298,7 @@ export default function CartPage() {
 
             <button
               onClick={handleCheckout}
-              disabled={loading || !accepted || !phoneValid}
+              disabled={loading || !accepted || !phoneValid || !emailVerified}
               className="w-full py-4 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
               style={{ background: "var(--brand)" }}
             >

@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
         total: (session.amount_total ?? 0) / 100,
         currency: session.currency ?? "eur",
         customerName: session.customer_details?.name ?? "Cliente",
-        customerEmail: session.customer_details?.email ?? "",
+        customerEmail: session.metadata?.email ?? session.customer_details?.email ?? "",
         customerPhone: session.metadata?.phone ?? session.customer_details?.phone ?? null,
         shippingAddress,
         trackingCode,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
+import { verifyValue } from "@/lib/auth";
 
 interface CartItem {
   id: string;
@@ -53,6 +54,20 @@ export async function POST(req: NextRequest) {
       throw new CheckoutError("Teléfono no válido");
     }
 
+    // --- Require a verified email (code confirmed via /api/email/verify) ---
+    const email = String(body.email ?? "").trim().toLowerCase();
+    const verifiedEmail = verifyValue<{ email: string; exp: number }>(
+      req.cookies.get("dosygo_email_verified")?.value
+    );
+    if (
+      !email ||
+      !verifiedEmail ||
+      verifiedEmail.exp * 1000 < Date.now() ||
+      verifiedEmail.email !== email
+    ) {
+      throw new CheckoutError("Verifica tu email antes de pagar", 403);
+    }
+
     // --- Fetch authoritative prices from DB (prevents client-side price tampering) ---
     const productIds = [...new Set(items.map((i) => i.id))];
     const dbProducts = await prisma.product.findMany({
@@ -99,6 +114,7 @@ export async function POST(req: NextRequest) {
     const session = await getStripe().checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
+      customer_email: email,
       line_items: lineItems,
       shipping_address_collection: {
         allowed_countries: [
@@ -126,6 +142,7 @@ export async function POST(req: NextRequest) {
       success_url: `${appUrl}/pedido/confirmacion?session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/carrito`,
       metadata: {
+        email,
         phone,
         items: JSON.stringify(items.map((i) => ({
           id: i.id,

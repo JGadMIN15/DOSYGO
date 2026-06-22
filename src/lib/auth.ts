@@ -49,6 +49,32 @@ export function hashToken(raw: string): string {
   return createHash("sha256").update(raw).digest("hex");
 }
 
+// Generic HMAC-signed value for short-lived stateless tokens (e.g. email OTP).
+export function signValue(value: unknown): string {
+  const body = Buffer.from(JSON.stringify(value)).toString("base64url");
+  const sig = createHmac("sha256", getSecret()).update(body).digest("base64url");
+  return `${body}.${sig}`;
+}
+
+export function verifyValue<T>(token: string | undefined | null): T | null {
+  if (!token) return null;
+  const secret = getSecretOrNull();
+  if (!secret) return null;
+  const dot = token.lastIndexOf(".");
+  if (dot <= 0) return null;
+  const body = token.slice(0, dot);
+  const sig = token.slice(dot + 1);
+  const expected = createHmac("sha256", secret).update(body).digest("base64url");
+  const a = Buffer.from(sig);
+  const b = Buffer.from(expected);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+  try {
+    return JSON.parse(Buffer.from(body, "base64url").toString()) as T;
+  } catch {
+    return null;
+  }
+}
+
 export function verifyPassword(password: string, stored: string): boolean {
   const parts = stored.split("$");
   if (parts.length !== 3 || parts[0] !== "scrypt") return false;
