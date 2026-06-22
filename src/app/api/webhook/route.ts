@@ -120,37 +120,45 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Order processing failed" }, { status: 500 });
   }
 
-  // Line items + tracking timeline (no nested writes -> no transaction).
-  try {
-    if (itemsMeta.length > 0) {
-      await prisma.orderItem.createMany({
-        data: itemsMeta.map((item) => ({
+  // Line items + tracking timeline. Insert rows one at a time with create():
+  // the Neon HTTP adapter supports single-statement writes but NOT createMany
+  // or nested writes (both run inside a transaction, which it rejects).
+  for (const item of itemsMeta) {
+    if (!item.id || !Number.isInteger(item.qty) || item.qty <= 0) continue;
+    try {
+      await prisma.orderItem.create({
+        data: {
           orderId,
           productId: item.id,
           quantity: item.qty,
           price: item.price,
-        })),
+        },
       });
+    } catch (err) {
+      console.error("OrderItem insert failed:", trackingCode, item.id, err);
     }
-    await prisma.shipmentTracking.createMany({
-      data: [
-        {
-          orderId,
-          status: "confirmed",
-          description: "Pedido confirmado y pago recibido",
-          location: "Madrid, España",
-        },
-        {
-          orderId,
-          status: "processing",
-          description: "Tu pedido está siendo preparado en nuestro almacén",
-          location: "Madrid, España",
-          timestamp: new Date(Date.now() + 2 * 60 * 60 * 1000),
-        },
-      ],
+  }
+
+  try {
+    await prisma.shipmentTracking.create({
+      data: {
+        orderId,
+        status: "confirmed",
+        description: "Pedido confirmado y pago recibido",
+        location: "Madrid, España",
+      },
+    });
+    await prisma.shipmentTracking.create({
+      data: {
+        orderId,
+        status: "processing",
+        description: "Tu pedido está siendo preparado en nuestro almacén",
+        location: "Madrid, España",
+        timestamp: new Date(Date.now() + 2 * 60 * 60 * 1000),
+      },
     });
   } catch (err) {
-    console.error("Order created but items/tracking insert failed:", trackingCode, err);
+    console.error("Tracking insert failed:", trackingCode, err);
   }
 
   console.log("Order created:", orderId, trackingCode);
