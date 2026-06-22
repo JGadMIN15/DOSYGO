@@ -1,0 +1,166 @@
+export const dynamic = "force-dynamic";
+
+import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/admin-session";
+
+interface ShippingAddress {
+  name?: string;
+  line1?: string;
+  line2?: string;
+  city?: string;
+  state?: string;
+  postal_code?: string;
+  country?: string;
+}
+
+function parseAddress(json: string): ShippingAddress {
+  try {
+    const a = JSON.parse(json);
+    return a && typeof a === "object" ? (a as ShippingAddress) : {};
+  } catch {
+    return {};
+  }
+}
+
+function fmtDate(d: Date): string {
+  return d.toLocaleString("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function fmtMoney(n: number, currency: string): string {
+  return n.toLocaleString("es-ES", { style: "currency", currency: currency.toUpperCase() });
+}
+
+const STATUS_STYLE: Record<string, string> = {
+  paid: "bg-green-100 text-green-700",
+  pending: "bg-amber-100 text-amber-700",
+  shipped: "bg-blue-100 text-blue-700",
+  delivered: "bg-gray-200 text-gray-700",
+};
+
+export default async function AdminOrdersPage() {
+  await requireAdmin();
+
+  const orders = await prisma.order.findMany({
+    orderBy: { createdAt: "desc" },
+    include: { items: { include: { product: true } } },
+  });
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold text-gray-900 mb-1">Pedidos</h1>
+      <p className="text-sm text-gray-500 mb-6">
+        {orders.length} {orders.length === 1 ? "pedido" : "pedidos"}
+      </p>
+
+      {orders.length === 0 ? (
+        <div className="bg-white rounded-xl border border-gray-200 py-20 text-center text-gray-500">
+          Todavía no hay pedidos.
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {orders.map((order) => {
+            const addr = parseAddress(order.shippingAddress);
+            const addrLines = [
+              addr.line1,
+              addr.line2,
+              [addr.postal_code, addr.city].filter(Boolean).join(" "),
+              [addr.state, addr.country].filter(Boolean).join(", "),
+            ].filter((l) => l && l.trim());
+
+            return (
+              <div key={order.id} className="bg-white rounded-xl border border-gray-200 p-5">
+                {/* Header */}
+                <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-100">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-sm font-semibold text-gray-900">
+                      {order.trackingCode ?? order.id.slice(0, 8)}
+                    </span>
+                    <span
+                      className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                        STATUS_STYLE[order.status] ?? "bg-gray-100 text-gray-600"
+                      }`}
+                    >
+                      {order.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs text-gray-400">{fmtDate(order.createdAt)}</span>
+                    <span className="font-bold text-gray-900">
+                      {fmtMoney(order.total, order.currency)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 pt-4">
+                  {/* Cliente */}
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+                      Cliente
+                    </p>
+                    <p className="text-sm text-gray-900 font-medium">{order.customerName}</p>
+                    {order.customerEmail && (
+                      <a href={`mailto:${order.customerEmail}`} className="text-sm text-red-600 break-all">
+                        {order.customerEmail}
+                      </a>
+                    )}
+                    <p className="text-sm text-gray-700">
+                      {order.customerPhone ? (
+                        <a href={`tel:${order.customerPhone}`}>{order.customerPhone}</a>
+                      ) : (
+                        <span className="text-gray-400">Sin teléfono</span>
+                      )}
+                    </p>
+                  </div>
+
+                  {/* Envío */}
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+                      Dirección de entrega
+                    </p>
+                    {addr.name && <p className="text-sm text-gray-900">{addr.name}</p>}
+                    {addrLines.length > 0 ? (
+                      addrLines.map((line, idx) => (
+                        <p key={idx} className="text-sm text-gray-700">
+                          {line}
+                        </p>
+                      ))
+                    ) : (
+                      <p className="text-sm text-gray-400">Sin dirección</p>
+                    )}
+                  </div>
+
+                  {/* Productos */}
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-wide text-gray-400 mb-1.5">
+                      Productos
+                    </p>
+                    {order.items.length > 0 ? (
+                      <ul className="space-y-1">
+                        {order.items.map((it) => (
+                          <li key={it.id} className="text-sm text-gray-700">
+                            {it.quantity}× {it.product?.name ?? "Producto"}{" "}
+                            <span className="text-gray-400">
+                              ({fmtMoney(it.price, order.currency)})
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="text-sm text-gray-400">Sin líneas</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}

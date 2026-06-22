@@ -33,6 +33,7 @@ model Order {
   currency          String             @default("eur")
   customerName      String
   customerEmail     String
+  customerPhone     String?
   shippingAddress   String
   trackingCode      String?
   estimatedDelivery DateTime?
