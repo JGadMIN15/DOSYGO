@@ -13,6 +13,7 @@ import {
   scryptSync,
   timingSafeEqual,
   createHmac,
+  createHash,
 } from "node:crypto";
 
 const SCRYPT_KEYLEN = 64;
@@ -33,6 +34,19 @@ export function hashPassword(password: string): string {
   const salt = randomBytes(16);
   const derived = scryptSync(password, salt, SCRYPT_KEYLEN);
   return `scrypt$${salt.toString("hex")}$${derived.toString("hex")}`;
+}
+
+// --- One-time activation tokens --------------------------------------------
+// The raw token travels in the activation link; only its hash is stored, so a
+// database leak does not expose usable tokens.
+
+export function generateSetupToken(): { raw: string; hash: string } {
+  const raw = randomBytes(32).toString("hex");
+  return { raw, hash: hashToken(raw) };
+}
+
+export function hashToken(raw: string): string {
+  return createHash("sha256").update(raw).digest("hex");
 }
 
 export function verifyPassword(password: string, stored: string): boolean {

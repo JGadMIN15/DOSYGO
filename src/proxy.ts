@@ -34,7 +34,11 @@ export function proxy(req: NextRequest): NextResponse {
   // --- Admin area: require a valid signed session cookie. This is a
   //     defense-in-depth gate; every admin Server Action and route handler
   //     also re-verifies auth on its own. ---
-  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+  if (
+    pathname.startsWith("/admin") &&
+    pathname !== "/admin/login" &&
+    pathname !== "/admin/activar"
+  ) {
     if (!verifySession(req.cookies.get(SESSION_COOKIE)?.value)) {
       const url = req.nextUrl.clone();
       url.pathname = "/admin/login";

@@ -65,10 +65,12 @@ model AdminUser {
   id                  String    @id @default(cuid())
   email               String    @unique
   name                String
-  passwordHash        String
+  passwordHash        String? // null until the account is activated (first-login password set)
   role                String    @default("editor") // "admin" | "editor"
   failedLoginAttempts Int       @default(0)
   lockedUntil         DateTime?
+  setupToken          String?   @unique // sha256 of the one-time activation token
+  setupTokenExpires   DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
 }

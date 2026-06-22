@@ -4,7 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword } from "@/lib/auth";
+import { verifyPassword, hashPassword, hashToken } from "@/lib/auth";
 import {
   setAdminSession,
   clearAdminSession,
@@ -43,6 +43,7 @@ async function logAudit(entry: {
 
 const MAX_FAILED_LOGINS = 5;
 const LOCK_MINUTES = 15;
+const MIN_PASSWORD_LENGTH = 8;
 
 export async function loginAction(
   _prev: ActionState,
@@ -73,11 +74,20 @@ export async function loginAction(
     };
   }
 
+  // Account created but not activated yet (no password set).
+  if (user && !user.passwordHash) {
+    return {
+      error:
+        "Tu cuenta aún no está activada. Abre el enlace de activación que te enviaron para crear tu contraseña.",
+    };
+  }
+
   // Run a verify even when the user is missing to flatten timing differences
   // and avoid leaking which emails exist.
-  const ok = user
-    ? verifyPassword(password, user.passwordHash)
-    : verifyPassword(password, "scrypt$00$00");
+  const ok =
+    user && user.passwordHash
+      ? verifyPassword(password, user.passwordHash)
+      : verifyPassword(password, "scrypt$00$00");
 
   if (!user || !ok) {
     if (user) {
@@ -113,6 +123,51 @@ export async function loginAction(
 export async function logoutAction(): Promise<void> {
   await clearAdminSession();
   redirect("/admin/login");
+}
+
+// First-login activation: set the password using a one-time token.
+export async function activateAccount(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const ip = await clientIp();
+  const limit = rateLimit(`admin-activate:${ip}`, 10, 60_000);
+  if (!limit.allowed) {
+    return { error: "Demasiados intentos. Espera un momento e inténtalo de nuevo." };
+  }
+
+  const token = String(formData.get("token") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const confirm = String(formData.get("confirm") ?? "");
+
+  if (!token) return { error: "Enlace de activación no válido." };
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return {
+      error: `La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`,
+    };
+  }
+  if (password !== confirm) return { error: "Las contraseñas no coinciden." };
+
+  const user = await prisma.adminUser.findFirst({
+    where: { setupToken: hashToken(token), setupTokenExpires: { gt: new Date() } },
+  });
+  if (!user) {
+    return { error: "El enlace de activación no es válido o ha caducado." };
+  }
+
+  await prisma.adminUser.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: hashPassword(password),
+      setupToken: null,
+      setupTokenExpires: null,
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+    },
+  });
+  await logAudit({ adminEmail: user.email, action: "account_activated", ip });
+  await setAdminSession({ id: user.id, email: user.email, role: user.role });
+  redirect("/admin");
 }
 
 // --- Product CRUD -----------------------------------------------------------
