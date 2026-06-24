@@ -175,6 +175,24 @@ export default async function AdminOrdersPage() {
 
                 {/* Estado / seguimiento (manual) */}
                 <div className="mt-4 pt-4 border-t border-gray-100">
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    <a
+                      href={`/admin/pedidos/${order.id}/factura`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Factura (PDF)
+                    </a>
+                    <a
+                      href={`/admin/pedidos/${order.id}/albaran`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    >
+                      Albarán (PDF)
+                    </a>
+                  </div>
                   <form action={updateOrderStatus} className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="orderId" value={order.id} />
                     <span className="text-xs font-bold uppercase tracking-wide text-gray-400">
