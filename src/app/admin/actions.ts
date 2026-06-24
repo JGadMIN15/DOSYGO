@@ -377,3 +377,57 @@ export async function deleteProduct(formData: FormData): Promise<void> {
   revalidatePath("/admin");
   redirect("/admin");
 }
+
+// --- Orders -----------------------------------------------------------------
+
+const ORDER_STATUSES = [
+  "paid",
+  "preparando",
+  "enviado",
+  "entregado",
+  "cancelado",
+] as const;
+
+const ORDER_STATUS_DESCRIPTION: Record<string, string> = {
+  paid: "Pago recibido",
+  preparando: "Preparando tu pedido",
+  enviado: "Pedido enviado",
+  entregado: "Pedido entregado",
+  cancelado: "Pedido cancelado",
+};
+
+// Update an order's status manually and add a tracking-timeline entry that the
+// customer sees. Uses single update + single create (no createMany/transaction,
+// which the Neon HTTP adapter rejects).
+export async function updateOrderStatus(formData: FormData): Promise<void> {
+  const session = await requireAdmin();
+
+  const id = String(formData.get("orderId") ?? "");
+  const status = String(formData.get("status") ?? "");
+  const note = String(formData.get("note") ?? "").trim().slice(0, 300);
+
+  if (!CUID_RE.test(id) || !(ORDER_STATUSES as readonly string[]).includes(status)) {
+    redirect("/admin/pedidos");
+  }
+
+  await prisma.order.update({ where: { id }, data: { status } });
+  await prisma.shipmentTracking.create({
+    data: {
+      orderId: id,
+      status,
+      description: note || ORDER_STATUS_DESCRIPTION[status] || "Actualización del pedido",
+      location: null,
+    },
+  });
+  await logAudit({
+    adminEmail: session.email,
+    action: "order_status_update",
+    targetType: "order",
+    targetId: id,
+    detail: status,
+    ip: await clientIp(),
+  });
+
+  revalidatePath("/admin/pedidos");
+  redirect("/admin/pedidos");
+}

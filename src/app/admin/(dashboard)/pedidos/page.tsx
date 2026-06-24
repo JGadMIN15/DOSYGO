@@ -2,6 +2,7 @@ export const dynamic = "force-dynamic";
 
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin-session";
+import { updateOrderStatus } from "../../actions";
 
 interface ShippingAddress {
   name?: string;
@@ -39,16 +40,31 @@ function fmtMoney(n: number, currency: string): string {
 const STATUS_STYLE: Record<string, string> = {
   paid: "bg-green-100 text-green-700",
   pending: "bg-amber-100 text-amber-700",
+  preparando: "bg-amber-100 text-amber-700",
+  enviado: "bg-blue-100 text-blue-700",
+  entregado: "bg-gray-200 text-gray-700",
+  cancelado: "bg-red-100 text-red-700",
   shipped: "bg-blue-100 text-blue-700",
   delivered: "bg-gray-200 text-gray-700",
 };
+
+const STATUS_OPTIONS: { value: string; label: string }[] = [
+  { value: "paid", label: "Pagado" },
+  { value: "preparando", label: "Preparando" },
+  { value: "enviado", label: "Enviado" },
+  { value: "entregado", label: "Entregado" },
+  { value: "cancelado", label: "Cancelado" },
+];
 
 export default async function AdminOrdersPage() {
   await requireAdmin();
 
   const orders = await prisma.order.findMany({
     orderBy: { createdAt: "desc" },
-    include: { items: { include: { product: true } } },
+    include: {
+      items: { include: { product: true } },
+      tracking: { orderBy: { timestamp: "desc" } },
+    },
   });
 
   return (
@@ -155,6 +171,53 @@ export default async function AdminOrdersPage() {
                       <p className="text-sm text-gray-400">Sin líneas</p>
                     )}
                   </div>
+                </div>
+
+                {/* Estado / seguimiento (manual) */}
+                <div className="mt-4 pt-4 border-t border-gray-100">
+                  <form action={updateOrderStatus} className="flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="orderId" value={order.id} />
+                    <span className="text-xs font-bold uppercase tracking-wide text-gray-400">
+                      Estado
+                    </span>
+                    <select
+                      name="status"
+                      defaultValue={order.status}
+                      className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                    >
+                      {STATUS_OPTIONS.map((s) => (
+                        <option key={s.value} value={s.value}>
+                          {s.label}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      name="note"
+                      placeholder="Nota / ubicación (opcional)"
+                      maxLength={300}
+                      className="flex-1 min-w-[160px] rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                    />
+                    <button
+                      type="submit"
+                      className="rounded-lg px-4 py-1.5 text-sm font-semibold text-white"
+                      style={{ background: "var(--brand, #dc2626)" }}
+                    >
+                      Actualizar
+                    </button>
+                  </form>
+
+                  {order.tracking.length > 0 && (
+                    <ul className="mt-3 space-y-1">
+                      {order.tracking.map((t) => (
+                        <li key={t.id} className="text-xs text-gray-500">
+                          <span className="text-gray-400">{fmtDate(t.timestamp)}</span> —{" "}
+                          <span className="font-medium text-gray-700">{t.status}</span>
+                          {t.description ? `: ${t.description}` : ""}
+                          {t.location ? ` (${t.location})` : ""}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             );
