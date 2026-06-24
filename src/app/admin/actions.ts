@@ -352,27 +352,31 @@ export async function deleteProduct(formData: FormData): Promise<void> {
     where: { id },
     select: { stripeProductId: true },
   });
+  const inOrders = await prisma.orderItem.count({ where: { productId: id } });
 
-  try {
+  if (inOrders === 0) {
+    // Never ordered: safe to hard-delete.
     await prisma.product.delete({ where: { id } });
-    if (existing?.stripeProductId) {
-      try {
-        await archiveStripeProduct(existing.stripeProductId);
-      } catch (err) {
-        console.error("Stripe archive failed:", err);
-      }
-    }
-    await logAudit({
-      adminEmail: session.email,
-      action: "product_delete",
-      targetType: "product",
-      targetId: id,
-      ip: await clientIp(),
-    });
-  } catch {
-    // A product referenced by existing orders cannot be hard-deleted (FK
-    // restrict). Left in place; a soft-delete flag could be added later.
+  } else {
+    // Referenced by existing orders: keep the history, just hide it (soft delete).
+    await prisma.product.update({ where: { id }, data: { archived: true } });
   }
+
+  if (existing?.stripeProductId) {
+    try {
+      await archiveStripeProduct(existing.stripeProductId);
+    } catch (err) {
+      console.error("Stripe archive failed:", err);
+    }
+  }
+  await logAudit({
+    adminEmail: session.email,
+    action: inOrders === 0 ? "product_delete" : "product_archive",
+    targetType: "product",
+    targetId: id,
+    ip: await clientIp(),
+  });
+
   revalidatePath("/productos");
   revalidatePath("/admin");
   redirect("/admin");

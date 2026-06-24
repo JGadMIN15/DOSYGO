@@ -20,6 +20,7 @@ model Product {
   stripeProductId String?
   stripePriceId   String?
   availableUntil  DateTime? // null = siempre disponible; si pasa la fecha, se retira de la tienda
+  archived        Boolean     @default(false) // borrado lógico: oculto de tienda y panel, conserva historial de pedidos
   createdAt       DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   orderItems    OrderItem[]

@@ -10,6 +10,7 @@ export default async function HomePage() {
   // Only products that are still available (no end date, or end date in the future)
   const nowDate = new Date();
   const available = {
+    archived: false,
     OR: [{ availableUntil: null }, { availableUntil: { gt: nowDate } }],
   };
 

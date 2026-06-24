@@ -17,9 +17,10 @@ export default async function ProductPage({ params }: Props) {
   const { id } = await params;
   const product = await prisma.product.findUnique({ where: { id } });
   if (!product) notFound();
-  // Retired from the store once the availability date has passed
+  // Hidden if archived (soft-deleted) or past its availability date
   // eslint-disable-next-line react-hooks/purity -- request-time clock in a Server Component
   const nowTs = Date.now();
+  if (product.archived) notFound();
   if (product.availableUntil && product.availableUntil.getTime() < nowTs) {
     notFound();
   }
@@ -28,6 +29,7 @@ export default async function ProductPage({ params }: Props) {
     where: {
       category: product.category,
       id: { not: id },
+      archived: false,
       OR: [{ availableUntil: null }, { availableUntil: { gt: new Date(nowTs) } }],
     },
     take: 4,

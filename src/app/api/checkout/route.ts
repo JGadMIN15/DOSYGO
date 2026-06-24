@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     // --- Fetch authoritative prices from DB (prevents client-side price tampering) ---
     const productIds = [...new Set(items.map((i) => i.id))];
     const dbProducts = await prisma.product.findMany({
-      where: { id: { in: productIds } },
+      where: { id: { in: productIds }, archived: false },
       select: { id: true, name: true, price: true, stock: true, availableUntil: true },
     });
 

@@ -23,6 +23,7 @@ export default async function ProductosPage({ searchParams }: Props) {
   // Only products still available (no end date, or end date in the future)
   const nowDate = new Date();
   const available = {
+    archived: false,
     OR: [{ availableUntil: null }, { availableUntil: { gt: nowDate } }],
   };
 
