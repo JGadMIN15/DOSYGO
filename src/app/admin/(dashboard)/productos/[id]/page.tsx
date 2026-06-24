@@ -44,6 +44,9 @@ export default async function EditProductPage({
           stock: product.stock,
           featured: product.featured,
           images: parseImages(product.images),
+          availableUntil: product.availableUntil
+            ? product.availableUntil.toISOString().slice(0, 10)
+            : undefined,
         }}
       />
     </div>

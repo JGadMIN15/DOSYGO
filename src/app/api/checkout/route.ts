@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     const productIds = [...new Set(items.map((i) => i.id))];
     const dbProducts = await prisma.product.findMany({
       where: { id: { in: productIds } },
-      select: { id: true, name: true, price: true, stock: true },
+      select: { id: true, name: true, price: true, stock: true, availableUntil: true },
     });
 
     if (dbProducts.length !== productIds.length) {
@@ -82,6 +82,12 @@ export async function POST(req: NextRequest) {
     // --- Stock and data validation ---
     for (const item of items) {
       const db = dbProducts.find((p) => p.id === item.id)!;
+      if (db.availableUntil && db.availableUntil.getTime() < Date.now()) {
+        return NextResponse.json(
+          { error: `${db.name} ya no está disponible` },
+          { status: 409 }
+        );
+      }
       if (db.stock < item.quantity) {
         return NextResponse.json(
           { error: `Stock insuficiente para ${db.name}` },

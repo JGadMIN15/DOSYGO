@@ -7,13 +7,20 @@ import LogoTransparent from "@/components/LogoTransparent";
 import { ChevronRight, Shield, Truck, RotateCcw, Award } from "lucide-react";
 
 export default async function HomePage() {
+  // Only products that are still available (no end date, or end date in the future)
+  const nowDate = new Date();
+  const available = {
+    OR: [{ availableUntil: null }, { availableUntil: { gt: nowDate } }],
+  };
+
   const featured = await prisma.product.findMany({
-    where: { featured: true },
+    where: { featured: true, ...available },
     take: 8,
     orderBy: { createdAt: "desc" },
   });
 
   const newest = await prisma.product.findMany({
+    where: available,
     take: 4,
     orderBy: { createdAt: "desc" },
   });

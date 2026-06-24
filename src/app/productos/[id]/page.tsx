@@ -17,9 +17,19 @@ export default async function ProductPage({ params }: Props) {
   const { id } = await params;
   const product = await prisma.product.findUnique({ where: { id } });
   if (!product) notFound();
+  // Retired from the store once the availability date has passed
+  // eslint-disable-next-line react-hooks/purity -- request-time clock in a Server Component
+  const nowTs = Date.now();
+  if (product.availableUntil && product.availableUntil.getTime() < nowTs) {
+    notFound();
+  }
 
   const related = await prisma.product.findMany({
-    where: { category: product.category, id: { not: id } },
+    where: {
+      category: product.category,
+      id: { not: id },
+      OR: [{ availableUntil: null }, { availableUntil: { gt: new Date(nowTs) } }],
+    },
     take: 4,
   });
 

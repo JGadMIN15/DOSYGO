@@ -13,6 +13,7 @@ export interface ProductInit {
   stock?: number;
   featured?: boolean;
   images?: string[];
+  availableUntil?: string; // YYYY-MM-DD
 }
 
 const initialState: ActionState = {};
@@ -190,6 +191,23 @@ export default function ProductForm({
             Destacado
           </label>
         </div>
+      </div>
+
+      <div>
+        <label htmlFor="availableUntil" className="block text-sm font-medium text-gray-700 mb-1">
+          Disponible hasta <span className="font-normal text-gray-400">(opcional)</span>
+        </label>
+        <input
+          id="availableUntil"
+          name="availableUntil"
+          type="date"
+          defaultValue={product?.availableUntil}
+          className={inputClass}
+        />
+        <p className="text-xs text-gray-400 mt-1">
+          Si pones una fecha, el producto se retira de la tienda automáticamente
+          al terminar ese día. Déjalo vacío para que esté siempre disponible.
+        </p>
       </div>
 
       {/* Image uploader */}

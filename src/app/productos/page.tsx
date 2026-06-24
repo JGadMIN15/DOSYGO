@@ -20,8 +20,15 @@ export default async function ProductosPage({ searchParams }: Props) {
     orden === "nuevo"       ? { createdAt: "desc"  as const } :
                               { featured: "desc"   as const };
 
+  // Only products still available (no end date, or end date in the future)
+  const nowDate = new Date();
+  const available = {
+    OR: [{ availableUntil: null }, { availableUntil: { gt: nowDate } }],
+  };
+
   const products = await prisma.product.findMany({
     where: {
+      ...available,
       ...(buscar ? { name: { contains: buscar } } : {}),
       ...(marca  ? { brand: marca }               : {}),
     },
@@ -30,6 +37,7 @@ export default async function ProductosPage({ searchParams }: Props) {
 
   const allBrands = await prisma.product.groupBy({
     by: ["brand"],
+    where: available,
     _count: { id: true },
     orderBy: { brand: "asc" },
   });

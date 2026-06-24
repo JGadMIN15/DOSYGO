@@ -19,6 +19,7 @@ model Product {
   featured        Boolean     @default(false)
   stripeProductId String?
   stripePriceId   String?
+  availableUntil  DateTime? // null = siempre disponible; si pasa la fecha, se retira de la tienda
   createdAt       DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
   orderItems    OrderItem[]

@@ -185,6 +185,7 @@ interface ProductData {
   stock: number;
   featured: boolean;
   images: string;
+  availableUntil: Date | null;
 }
 
 function isHttpsUrl(value: string): boolean {
@@ -207,6 +208,7 @@ function parseProductForm(
   const featured =
     formData.get("featured") === "on" || formData.get("featured") === "true";
   const imagesRaw = String(formData.get("images") ?? "[]");
+  const availableUntilRaw = String(formData.get("availableUntil") ?? "").trim();
 
   if (!name || name.length > MAX.name)
     return { error: "El nombre es obligatorio (máx. 200 caracteres)." };
@@ -243,6 +245,17 @@ function parseProductForm(
     }
   }
 
+  // Optional "available until": a date input (YYYY-MM-DD) means available
+  // through the end of that day. Empty = always available.
+  let availableUntil: Date | null = null;
+  if (availableUntilRaw) {
+    const parsed = new Date(`${availableUntilRaw}T23:59:59`);
+    if (Number.isNaN(parsed.getTime())) {
+      return { error: "La fecha de disponibilidad no es válida." };
+    }
+    availableUntil = parsed;
+  }
+
   return {
     data: {
       name,
@@ -253,6 +266,7 @@ function parseProductForm(
       stock,
       featured,
       images: JSON.stringify(urls),
+      availableUntil,
     },
   };
 }

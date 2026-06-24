@@ -21,6 +21,9 @@ export default async function AdminProductsPage() {
     orderBy: { createdAt: "desc" },
   });
 
+  // eslint-disable-next-line react-hooks/purity -- request-time clock in a Server Component
+  const nowTs = Date.now();
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -85,6 +88,20 @@ export default async function AdminProductsPage() {
                           {product.featured && (
                             <span className="ml-2 text-[10px] uppercase font-bold text-amber-600">
                               Destacado
+                            </span>
+                          )}
+                          {product.availableUntil && (
+                            <span
+                              className={`block text-[11px] font-normal ${
+                                product.availableUntil.getTime() < nowTs
+                                  ? "text-red-600"
+                                  : "text-gray-400"
+                              }`}
+                            >
+                              {product.availableUntil.getTime() < nowTs
+                                ? "Retirado el "
+                                : "Disponible hasta "}
+                              {product.availableUntil.toLocaleDateString("es-ES")}
                             </span>
                           )}
                         </span>
