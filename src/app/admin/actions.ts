@@ -536,3 +536,27 @@ export async function changeOwnPassword(
   });
   return { success: "Contraseña actualizada correctamente." };
 }
+
+// --- Store settings (role "admin" only) ------------------------------------
+
+export async function saveSettings(formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const ivaPercent = Math.min(
+    100,
+    Math.max(0, parseInt(String(formData.get("ivaPercent") ?? "21"), 10) || 0)
+  );
+  const freeShippingCents = Math.max(
+    0,
+    Math.round(Number(String(formData.get("freeShippingEuros") ?? "0").replace(",", ".")) * 100)
+  );
+  const shippingCents = Math.max(
+    0,
+    Math.round(Number(String(formData.get("shippingEuros") ?? "0").replace(",", ".")) * 100)
+  );
+  await prisma.settings.update({
+    where: { id: "default" },
+    data: { ivaPercent, freeShippingCents, shippingCents },
+  });
+  revalidatePath("/admin/ajustes");
+  redirect("/admin/ajustes");
+}

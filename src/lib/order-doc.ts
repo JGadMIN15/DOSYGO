@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { COMPANY } from "@/lib/company";
+import { getSettings } from "@/lib/settings";
 
 interface DocItem {
   name: string;
@@ -112,10 +112,13 @@ export async function getOrderDocProps(id: string): Promise<OrderDocProps | null
     lineTotal: round2(it.price * it.quantity),
   }));
 
+  const settings = await getSettings();
+  const ivaRate = settings.ivaPercent / 100;
+
   const itemsTotal = round2(items.reduce((s, i) => s + i.lineTotal, 0));
   const total = order.total;
   const shippingCost = round2(Math.max(0, total - itemsTotal));
-  const base = round2(total / (1 + COMPANY.ivaRate));
+  const base = round2(total / (1 + ivaRate));
   const iva = round2(total - base);
 
   const addr = parseAddress(order.shippingAddress);
@@ -143,6 +146,6 @@ export async function getOrderDocProps(id: string): Promise<OrderDocProps | null
     total,
     base,
     iva,
-    ivaPct: Math.round(COMPANY.ivaRate * 100),
+    ivaPct: settings.ivaPercent,
   };
 }

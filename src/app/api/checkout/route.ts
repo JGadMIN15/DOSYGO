@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import { verifyValue } from "@/lib/auth";
+import { getSettings } from "@/lib/settings";
 
 interface CartItem {
   id: string;
@@ -96,6 +97,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const settings = await getSettings();
     const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/[^\x20-\x7E]/g, "").trim();
     const subtotal = items.reduce((sum, item) => {
       const db = dbProducts.find((p) => p.id === item.id)!;
@@ -134,7 +136,7 @@ export async function POST(req: NextRequest) {
           shipping_rate_data: {
             type: "fixed_amount",
             fixed_amount: {
-              amount: subtotal >= 10000 ? 0 : 599,
+              amount: subtotal >= settings.freeShippingCents ? 0 : settings.shippingCents,
               currency: "eur",
             },
             display_name: "Envio estandar Europa",

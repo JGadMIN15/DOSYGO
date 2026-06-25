@@ -31,9 +31,14 @@ export default async function AdminDashboardLayout({
                 Vendidos
               </Link>
               {session.role === "admin" && (
-                <Link href="/admin/usuarios" className="text-gray-600 hover:text-gray-900">
-                  Usuarios
-                </Link>
+                <>
+                  <Link href="/admin/usuarios" className="text-gray-600 hover:text-gray-900">
+                    Usuarios
+                  </Link>
+                  <Link href="/admin/ajustes" className="text-gray-600 hover:text-gray-900">
+                    Ajustes
+                  </Link>
+                </>
               )}
             </nav>
           </div>

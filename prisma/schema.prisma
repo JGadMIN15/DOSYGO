@@ -91,3 +91,11 @@ model AuditLog {
 
   @@index([createdAt])
 }
+
+model Settings {
+  id                String   @id @default("default")
+  ivaPercent        Int      @default(21)
+  freeShippingCents Int      @default(10000) // envío gratis a partir de este importe (céntimos)
+  shippingCents     Int      @default(599) // coste de envío (céntimos)
+  updatedAt         DateTime @updatedAt
+}
