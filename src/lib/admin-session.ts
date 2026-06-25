@@ -53,3 +53,10 @@ export async function requireAdmin(): Promise<SessionPayload> {
   if (!session) redirect("/admin/login");
   return session;
 }
+
+/** Require a specific role (e.g. "admin"). Sends others back to the dashboard. */
+export async function requireRole(role: string): Promise<SessionPayload> {
+  const session = await requireAdmin();
+  if (session.role !== role) redirect("/admin");
+  return session;
+}

@@ -56,23 +56,68 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "cancelado", label: "Cancelado" },
 ];
 
-export default async function AdminOrdersPage() {
-  await requireAdmin();
+const PAGE_SIZE = 20;
 
+export default async function AdminOrdersPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; page?: string }>;
+}) {
+  await requireAdmin();
+  const sp = await searchParams;
+  const q = (sp.q ?? "").trim();
+  const page = Math.max(1, parseInt(sp.page ?? "1", 10) || 1);
+
+  const where = q
+    ? {
+        OR: [
+          { customerName: { contains: q, mode: "insensitive" as const } },
+          { customerEmail: { contains: q, mode: "insensitive" as const } },
+          { trackingCode: { contains: q, mode: "insensitive" as const } },
+        ],
+      }
+    : {};
+
+  const total = await prisma.order.count({ where });
+  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
   const orders = await prisma.order.findMany({
+    where,
     orderBy: { createdAt: "desc" },
+    take: PAGE_SIZE,
+    skip: (page - 1) * PAGE_SIZE,
     include: {
       items: { include: { product: true } },
       tracking: { orderBy: { timestamp: "desc" } },
     },
   });
 
+  const pageHref = (p: number) =>
+    `/admin/pedidos?${new URLSearchParams({ ...(q ? { q } : {}), page: String(p) })}`;
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-1">Pedidos</h1>
-      <p className="text-sm text-gray-500 mb-6">
-        {orders.length} {orders.length === 1 ? "pedido" : "pedidos"}
+      <p className="text-sm text-gray-500 mb-4">
+        {total} {total === 1 ? "pedido" : "pedidos"}
+        {q ? ` · búsqueda: "${q}"` : ""}
       </p>
+
+      <form method="GET" className="flex gap-2 mb-5">
+        <input
+          name="q"
+          defaultValue={q}
+          placeholder="Buscar por cliente, email o código…"
+          className="flex-1 max-w-md rounded-lg border border-gray-300 px-3.5 py-2 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900"
+        />
+        <button className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+          Buscar
+        </button>
+        {q && (
+          <a href="/admin/pedidos" className="rounded-lg px-3 py-2 text-sm text-gray-500 hover:text-gray-900">
+            Limpiar
+          </a>
+        )}
+      </form>
 
       {orders.length === 0 ? (
         <div className="bg-white rounded-xl border border-gray-200 py-20 text-center text-gray-500">
@@ -240,6 +285,32 @@ export default async function AdminOrdersPage() {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {pages > 1 && (
+        <div className="flex items-center justify-between mt-4 text-sm">
+          <span className="text-gray-500">
+            Página {page} de {pages}
+          </span>
+          <div className="flex gap-2">
+            {page > 1 && (
+              <a
+                href={pageHref(page - 1)}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-50"
+              >
+                ← Anterior
+              </a>
+            )}
+            {page < pages && (
+              <a
+                href={pageHref(page + 1)}
+                className="rounded-lg border border-gray-300 px-3 py-1.5 text-gray-700 hover:bg-gray-50"
+              >
+                Siguiente →
+              </a>
+            )}
+          </div>
         </div>
       )}
     </div>

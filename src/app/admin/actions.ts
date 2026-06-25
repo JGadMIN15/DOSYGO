@@ -4,17 +4,24 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { verifyPassword, hashPassword, hashToken } from "@/lib/auth";
+import {
+  verifyPassword,
+  hashPassword,
+  hashToken,
+  generateSetupToken,
+} from "@/lib/auth";
 import {
   setAdminSession,
   clearAdminSession,
   requireAdmin,
+  requireRole,
 } from "@/lib/admin-session";
 import { rateLimit } from "@/lib/rate-limit";
 import { syncProductToStripe, archiveStripeProduct } from "@/lib/stripe-sync";
 
 export interface ActionState {
   error?: string;
+  success?: string;
 }
 
 async function clientIp(): Promise<string> {
@@ -310,8 +317,8 @@ export async function createProduct(
     ip: await clientIp(),
   });
   revalidatePath("/productos");
-  revalidatePath("/admin");
-  redirect("/admin");
+  revalidatePath("/admin/productos");
+  redirect("/admin/productos");
 }
 
 export async function updateProduct(
@@ -338,15 +345,15 @@ export async function updateProduct(
   });
   revalidatePath("/productos");
   revalidatePath(`/productos/${id}`);
-  revalidatePath("/admin");
-  redirect("/admin");
+  revalidatePath("/admin/productos");
+  redirect("/admin/productos");
 }
 
 export async function deleteProduct(formData: FormData): Promise<void> {
   const session = await requireAdmin();
 
   const id = String(formData.get("id") ?? "");
-  if (!CUID_RE.test(id)) redirect("/admin");
+  if (!CUID_RE.test(id)) redirect("/admin/productos");
 
   const existing = await prisma.product.findUnique({
     where: { id },
@@ -378,8 +385,8 @@ export async function deleteProduct(formData: FormData): Promise<void> {
   });
 
   revalidatePath("/productos");
-  revalidatePath("/admin");
-  redirect("/admin");
+  revalidatePath("/admin/productos");
+  redirect("/admin/productos");
 }
 
 // --- Orders -----------------------------------------------------------------
@@ -434,4 +441,97 @@ export async function updateOrderStatus(formData: FormData): Promise<void> {
 
   revalidatePath("/admin/pedidos");
   redirect("/admin/pedidos");
+}
+
+// --- Admin users (role "admin" only) ---------------------------------------
+
+const ADMIN_ROLES = ["admin", "editor"] as const;
+const SETUP_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+function activationLink(rawToken: string): string {
+  const base = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/\/$/, "");
+  return `${base}/admin/activar?token=${rawToken}`;
+}
+
+export async function inviteAdmin(formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  const name = String(formData.get("name") ?? "").trim() || "Admin";
+  const role = String(formData.get("role") ?? "editor");
+  if (
+    !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ||
+    !(ADMIN_ROLES as readonly string[]).includes(role)
+  ) {
+    redirect("/admin/usuarios");
+  }
+  const { raw, hash } = generateSetupToken();
+  const expires = new Date(Date.now() + SETUP_TTL_MS);
+  await prisma.adminUser.upsert({
+    where: { email },
+    update: { name, role, passwordHash: null, setupToken: hash, setupTokenExpires: expires },
+    create: { email, name, role, setupToken: hash, setupTokenExpires: expires },
+  });
+  redirect(`/admin/usuarios?link=${encodeURIComponent(activationLink(raw))}`);
+}
+
+export async function resetAdminPassword(formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const id = String(formData.get("id") ?? "");
+  if (!CUID_RE.test(id)) redirect("/admin/usuarios");
+  const { raw, hash } = generateSetupToken();
+  await prisma.adminUser.update({
+    where: { id },
+    data: {
+      passwordHash: null,
+      setupToken: hash,
+      setupTokenExpires: new Date(Date.now() + SETUP_TTL_MS),
+      failedLoginAttempts: 0,
+      lockedUntil: null,
+    },
+  });
+  redirect(`/admin/usuarios?link=${encodeURIComponent(activationLink(raw))}`);
+}
+
+export async function setAdminRole(formData: FormData): Promise<void> {
+  await requireRole("admin");
+  const id = String(formData.get("id") ?? "");
+  const role = String(formData.get("role") ?? "");
+  if (!CUID_RE.test(id) || !(ADMIN_ROLES as readonly string[]).includes(role)) {
+    redirect("/admin/usuarios");
+  }
+  await prisma.adminUser.update({ where: { id }, data: { role } });
+  redirect("/admin/usuarios");
+}
+
+export async function deleteAdmin(formData: FormData): Promise<void> {
+  const session = await requireRole("admin");
+  const id = String(formData.get("id") ?? "");
+  // Can't delete your own account.
+  if (CUID_RE.test(id) && id !== session.sub) {
+    await prisma.adminUser.delete({ where: { id } });
+  }
+  redirect("/admin/usuarios");
+}
+
+export async function changeOwnPassword(
+  _prev: ActionState,
+  formData: FormData
+): Promise<ActionState> {
+  const session = await requireAdmin();
+  const current = String(formData.get("current") ?? "");
+  const next = String(formData.get("next") ?? "");
+  if (next.length < MIN_PASSWORD_LENGTH) {
+    return {
+      error: `La nueva contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres.`,
+    };
+  }
+  const user = await prisma.adminUser.findUnique({ where: { id: session.sub } });
+  if (!user || !user.passwordHash || !verifyPassword(current, user.passwordHash)) {
+    return { error: "La contraseña actual no es correcta." };
+  }
+  await prisma.adminUser.update({
+    where: { id: user.id },
+    data: { passwordHash: hashPassword(next) },
+  });
+  return { success: "Contraseña actualizada correctamente." };
 }

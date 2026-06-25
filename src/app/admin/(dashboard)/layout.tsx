@@ -19,6 +19,9 @@ export default async function AdminDashboardLayout({
             </Link>
             <nav className="hidden sm:flex items-center gap-4 text-sm">
               <Link href="/admin" className="text-gray-600 hover:text-gray-900">
+                Inicio
+              </Link>
+              <Link href="/admin/productos" className="text-gray-600 hover:text-gray-900">
                 Productos
               </Link>
               <Link href="/admin/pedidos" className="text-gray-600 hover:text-gray-900">
@@ -27,12 +30,11 @@ export default async function AdminDashboardLayout({
               <Link href="/admin/vendidos" className="text-gray-600 hover:text-gray-900">
                 Vendidos
               </Link>
-              <Link
-                href="/admin/productos/nuevo"
-                className="text-gray-600 hover:text-gray-900"
-              >
-                Añadir producto
-              </Link>
+              {session.role === "admin" && (
+                <Link href="/admin/usuarios" className="text-gray-600 hover:text-gray-900">
+                  Usuarios
+                </Link>
+              )}
             </nav>
           </div>
           <div className="flex items-center gap-3">
