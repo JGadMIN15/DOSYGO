@@ -4,6 +4,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin-session";
 import { deleteProduct } from "../../actions";
+import { formatPrice } from "@/lib/format";
 
 const PAGE_SIZE = 20;
 
@@ -162,7 +163,7 @@ export default async function AdminProductsPage({
                         </div>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{product.brand}</td>
-                      <td className="px-4 py-3 text-gray-900">€{product.price}</td>
+                      <td className="px-4 py-3 text-gray-900">{formatPrice(product.price)}</td>
                       <td className="px-4 py-3">
                         <span
                           className={

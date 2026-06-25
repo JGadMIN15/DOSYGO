@@ -8,6 +8,7 @@ import AddToCartButton from "@/components/AddToCartButton";
 import WatchImage from "@/components/WatchImage";
 import ProductGallery from "@/components/ProductGallery";
 import { Shield, Truck, RotateCcw, Star, ChevronRight, Check } from "lucide-react";
+import { formatPrice } from "@/lib/format";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -90,7 +91,7 @@ export default async function ProductPage({ params }: Props) {
             {/* Price */}
             <div className="flex items-baseline gap-3 mb-1">
               <span className="text-4xl font-black text-gray-900">
-                {product.price.toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
+                {formatPrice(product.price)}
               </span>
             </div>
             <p className="text-xs text-gray-400 mb-6">IVA incluido · Envío 5€ (gratis en pedidos +100€)</p>
@@ -171,7 +172,7 @@ export default async function ProductPage({ params }: Props) {
                     <div className="p-3 border-t border-gray-100">
                       <p className="text-xs text-gray-400 font-semibold uppercase tracking-wide mb-0.5">{p.brand}</p>
                       <p className="text-sm font-medium text-gray-800 group-hover:text-red-600 transition-colors line-clamp-2">{p.name}</p>
-                      <p className="font-bold text-sm mt-1">{p.price.toLocaleString("es-ES", { style: "currency", currency: "EUR" })}</p>
+                      <p className="font-bold text-sm mt-1">{formatPrice(p.price)}</p>
                     </div>
                   </Link>
                 );

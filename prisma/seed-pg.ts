@@ -26,7 +26,7 @@ async function main() {
       category: "Cronógrafos",
       description:
         "Reloj cronógrafo Emporio Armani Racer AR11637 para hombre. Caja de acero inoxidable de 43mm, esfera negra con subdiales en acero, cristal mineral resistente a arañazos. Movimiento de cuarzo japonés con función cronógrafo. Correa de acero inoxidable con cierre de mariposa. Resistente al agua hasta 50 metros. Diseño italiano con elegancia urbana.",
-      price: 199,
+      price: 19900, // céntimos (= 199,00 €)
       images: JSON.stringify([
         "/productos/ar11637/1.jpeg",
         "/productos/ar11637/2.jpeg",

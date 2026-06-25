@@ -161,7 +161,7 @@ export default function ProductForm({
             min="0"
             step="0.01"
             required
-            defaultValue={product?.price}
+            defaultValue={product?.price !== undefined ? product.price / 100 : undefined}
             className={inputClass}
           />
         </div>

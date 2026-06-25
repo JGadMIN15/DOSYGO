@@ -11,7 +11,7 @@ model Product {
   id            String      @id @default(cuid())
   name          String
   description   String
-  price         Float
+  price         Int // céntimos
   images        String
   category      String
   brand         String
@@ -31,7 +31,7 @@ model Order {
   stripeSessionId   String?            @unique
   stripePaymentId   String?
   status            String             @default("pending")
-  total             Float
+  total             Int // céntimos
   currency          String             @default("eur")
   customerName      String
   customerEmail     String
@@ -50,7 +50,7 @@ model OrderItem {
   orderId   String
   productId String
   quantity  Int
-  price     Float
+  price     Int // céntimos
   order     Order   @relation(fields: [orderId], references: [id])
   product   Product @relation(fields: [productId], references: [id])
 }

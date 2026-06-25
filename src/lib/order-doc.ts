@@ -22,8 +22,9 @@ export interface OrderDocProps {
   ivaPct: number;
 }
 
+// Money is in integer cents now, so just round to whole cents.
 function round2(n: number): number {
-  return Math.round(n * 100) / 100;
+  return Math.round(n);
 }
 
 // CUIDs are strings; turn one into a stable positive integer (sum of char codes).

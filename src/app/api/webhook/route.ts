@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
         stripeSessionId: session.id,
         stripePaymentId: session.payment_intent as string,
         status: "paid",
-        total: (session.amount_total ?? 0) / 100,
+        total: session.amount_total ?? 0,
         currency: session.currency ?? "eur",
         customerName: session.customer_details?.name ?? "Cliente",
         customerEmail: session.metadata?.email ?? session.customer_details?.email ?? "",

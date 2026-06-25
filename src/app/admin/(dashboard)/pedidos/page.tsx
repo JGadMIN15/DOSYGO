@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin-session";
 import { updateOrderStatus } from "../../actions";
+import { formatPrice } from "@/lib/format";
 
 interface ShippingAddress {
   name?: string;
@@ -33,9 +34,6 @@ function fmtDate(d: Date): string {
   });
 }
 
-function fmtMoney(n: number, currency: string): string {
-  return n.toLocaleString("es-ES", { style: "currency", currency: currency.toUpperCase() });
-}
 
 const STATUS_STYLE: Record<string, string> = {
   paid: "bg-green-100 text-green-700",
@@ -153,7 +151,7 @@ export default async function AdminOrdersPage({
                   <div className="flex items-center gap-4">
                     <span className="text-xs text-gray-400">{fmtDate(order.createdAt)}</span>
                     <span className="font-bold text-gray-900">
-                      {fmtMoney(order.total, order.currency)}
+                      {formatPrice(order.total)}
                     </span>
                   </div>
                 </div>
@@ -207,7 +205,7 @@ export default async function AdminOrdersPage({
                           <li key={it.id} className="text-sm text-gray-700">
                             {it.quantity}× {it.product?.name ?? "Producto"}{" "}
                             <span className="text-gray-400">
-                              ({fmtMoney(it.price, order.currency)})
+                              ({formatPrice(it.price)})
                             </span>
                           </li>
                         ))}

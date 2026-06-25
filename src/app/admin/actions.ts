@@ -226,9 +226,10 @@ function parseProductForm(
   if (!description || description.length > MAX.description)
     return { error: "La descripción es obligatoria (máx. 5000 caracteres)." };
 
-  const price = Number(priceRaw);
-  if (!Number.isFinite(price) || price < 0 || price > 1_000_000)
+  const priceEuros = Number(priceRaw);
+  if (!Number.isFinite(priceEuros) || priceEuros < 0 || priceEuros > 1_000_000)
     return { error: "El precio no es válido." };
+  const price = Math.round(priceEuros * 100); // céntimos
 
   const stock = Number(stockRaw);
   if (!Number.isInteger(stock) || stock < 0 || stock > 1_000_000)

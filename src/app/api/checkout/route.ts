@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
           product_data: {
             name: db.name,
           },
-          unit_amount: Math.round(db.price * 100),
+          unit_amount: db.price,
         },
         quantity: item.quantity,
       };
@@ -134,7 +134,7 @@ export async function POST(req: NextRequest) {
           shipping_rate_data: {
             type: "fixed_amount",
             fixed_amount: {
-              amount: subtotal >= 100 ? 0 : 500,
+              amount: subtotal >= 10000 ? 0 : 599,
               currency: "eur",
             },
             display_name: "Envio estandar Europa",

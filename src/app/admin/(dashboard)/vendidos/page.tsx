@@ -13,8 +13,8 @@ function fmtDate(d: Date): string {
   });
 }
 
-function fmtMoney(n: number): string {
-  return n.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
+function fmtMoney(cents: number): string {
+  return (cents / 100).toLocaleString("es-ES", { style: "currency", currency: "EUR" });
 }
 
 function daysBetween(from: Date, to: Date): number {

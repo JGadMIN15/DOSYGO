@@ -24,8 +24,8 @@ interface Props {
   ivaPct: number;
 }
 
-function eur(n: number): string {
-  return n.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
+function eur(cents: number): string {
+  return (cents / 100).toLocaleString("es-ES", { style: "currency", currency: "EUR" });
 }
 
 export default function OrderDocument(props: Props) {

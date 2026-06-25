@@ -5,6 +5,7 @@ import WatchImage from "@/components/WatchImage";
 import Link from "next/link";
 import { Trash2, ShoppingBag, ChevronRight, Shield, Truck } from "lucide-react";
 import { useState } from "react";
+import { formatPrice } from "@/lib/format";
 
 export default function CartPage() {
   const { items, removeItem, updateQuantity, total, count } = useCartStore();
@@ -113,7 +114,7 @@ export default function CartPage() {
   }
 
   const subtotal = total();
-  const shipping = subtotal >= 100 ? 0 : 5.99;
+  const shipping = subtotal >= 10000 ? 0 : 599;
   const grandTotal = subtotal + shipping;
 
   return (
@@ -133,7 +134,7 @@ export default function CartPage() {
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1 truncate">{item.name}</h3>
                 <p className="font-bold text-lg" style={{ color: "var(--brand)" }}>
-                  {item.price.toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
+                  {formatPrice(item.price)}
                 </p>
                 <div className="flex items-center justify-between mt-3">
                   {/* Quantity */}
@@ -154,7 +155,7 @@ export default function CartPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="text-sm font-bold text-gray-900">
-                      {(item.price * item.quantity).toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
+                      {formatPrice(item.price * item.quantity)}
                     </span>
                     <button
                       onClick={() => removeItem(item.id)}
@@ -177,20 +178,20 @@ export default function CartPage() {
             <div className="space-y-3 mb-5">
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Subtotal ({count()} artículos)</span>
-                <span>{subtotal.toLocaleString("es-ES", { style: "currency", currency: "EUR" })}</span>
+                <span>{formatPrice(subtotal)}</span>
               </div>
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Envío</span>
                 <span className={shipping === 0 ? "text-green-600 font-medium" : ""}>
-                  {shipping === 0 ? "Gratis" : shipping.toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
+                  {shipping === 0 ? "Gratis" : formatPrice(shipping)}
                 </span>
               </div>
               {shipping > 0 && (
-                <p className="text-xs text-gray-400">Añade {(100 - subtotal).toLocaleString("es-ES", { style: "currency", currency: "EUR" })} más para envío gratis</p>
+                <p className="text-xs text-gray-400">Añade {formatPrice(10000 - subtotal)} más para envío gratis</p>
               )}
               <div className="border-t border-gray-100 pt-3 flex justify-between font-black text-lg text-gray-900">
                 <span>Total</span>
-                <span>{grandTotal.toLocaleString("es-ES", { style: "currency", currency: "EUR" })}</span>
+                <span>{formatPrice(grandTotal)}</span>
               </div>
             </div>
 
@@ -311,7 +312,7 @@ export default function CartPage() {
                   Procesando...
                 </span>
               ) : (
-                <>Pagar con Stripe · {grandTotal.toLocaleString("es-ES", { style: "currency", currency: "EUR" })}</>
+                <>Pagar con Stripe · {formatPrice(grandTotal)}</>
               )}
             </button>
 

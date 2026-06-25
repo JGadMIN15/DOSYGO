@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { CheckCircle, Package, Truck, Home, ChevronRight, MapPin } from "lucide-react";
 import ClearCartOnLoad from "@/components/ClearCartOnLoad";
+import { formatPrice } from "@/lib/format";
 
 interface Props {
   searchParams: Promise<{ session_id?: string }>;
@@ -42,7 +43,7 @@ export default async function ConfirmationPage({ searchParams }: Props) {
 
   const customerName = session.customer_details?.name ?? "Cliente";
   const customerEmail = session.customer_details?.email ?? "";
-  const total = (session.amount_total ?? 0) / 100;
+  const total = session.amount_total ?? 0;
 
   const trackingSteps = [
     { key: "confirmed",  label: "Pedido confirmado",   icon: CheckCircle, color: "text-green-600",  bg: "bg-green-100" },
@@ -162,14 +163,14 @@ export default async function ConfirmationPage({ searchParams }: Props) {
               <p className="text-xs text-gray-400">x{item.quantity}</p>
             </div>
             <p className="text-sm font-semibold">
-              {(item.price * item.quantity).toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
+              {formatPrice(item.price * item.quantity)}
             </p>
           </div>
         ))}
         <div className="flex justify-between items-center pt-4 mt-2">
           <span className="font-black text-gray-900">Total pagado</span>
           <span className="font-black text-xl" style={{ color: "var(--brand)" }}>
-            {total.toLocaleString("es-ES", { style: "currency", currency: "EUR" })}
+            {formatPrice(total)}
           </span>
         </div>
       </div>

@@ -5,6 +5,7 @@ import { ShoppingCart, Heart } from "lucide-react";
 import { useCartStore } from "@/lib/store";
 import WatchImage from "./WatchImage";
 import { useState } from "react";
+import { formatPrice } from "@/lib/format";
 
 interface Product {
   id: string;
@@ -37,7 +38,7 @@ export default function WatchCard({ product }: { product: Product }) {
     setWishlisted((w) => !w);
   };
 
-  const priceFormatted = product.price.toLocaleString("es-ES", { style: "currency", currency: "EUR" });
+  const priceFormatted = formatPrice(product.price);
 
   return (
     <Link href={`/productos/${product.id}`} className="group block">
