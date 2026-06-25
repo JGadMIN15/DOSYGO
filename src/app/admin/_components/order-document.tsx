@@ -13,15 +13,6 @@ interface Props {
   type: "factura" | "albaran";
   docNumber: string;
   dateStr: string;
-  company: {
-    name: string;
-    nif: string;
-    address: string;
-    city: string;
-    email: string;
-    phone: string;
-    site: string;
-  };
   customer: { name: string; email: string; phone: string | null };
   shippingName?: string;
   shippingLines: string[];
@@ -68,13 +59,7 @@ export default function OrderDocument(props: Props) {
         <div className="flex justify-between items-start border-b border-gray-200 pb-6 mb-6">
           <div>
             <div className="text-2xl font-bold">Dos&amp;Go</div>
-            <div className="text-gray-700 mt-1">{props.company.name}</div>
-            <div className="text-gray-500">NIF: {props.company.nif}</div>
-            <div className="text-gray-500">{props.company.address}</div>
-            <div className="text-gray-500">{props.company.city}</div>
-            <div className="text-gray-500">
-              {props.company.email} · {props.company.phone}
-            </div>
+            <div className="text-gray-500 mt-1">dosygo.es</div>
           </div>
           <div className="text-right">
             <div className="text-xl font-bold uppercase">
@@ -188,7 +173,7 @@ export default function OrderDocument(props: Props) {
         )}
 
         <div className="mt-10 pt-4 border-t border-gray-200 text-xs text-gray-400">
-          {props.company.site} · Documento generado automáticamente.
+          dosygo.es · Documento generado automáticamente.
         </div>
       </div>
     </div>
