@@ -9,6 +9,7 @@ import WatchImage from "@/components/WatchImage";
 import ProductGallery from "@/components/ProductGallery";
 import { Shield, Truck, RotateCcw, Star, ChevronRight, Check } from "lucide-react";
 import { formatPrice } from "@/lib/format";
+import { parseImages } from "@/lib/images";
 
 interface Props {
   params: Promise<{ id: string }>;
@@ -36,7 +37,7 @@ export default async function ProductPage({ params }: Props) {
     take: 4,
   });
 
-  const images: string[] = JSON.parse(product.images).filter(Boolean);
+  const images = parseImages(product.images);
 
   const features = [
     "Movimiento de cuarzo de alta precisión",
@@ -159,7 +160,7 @@ export default async function ProductPage({ params }: Props) {
             <h2 className="text-xl font-black text-gray-900 mb-6">También te puede gustar</h2>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {related.map((p) => {
-                const imgs: string[] = JSON.parse(p.images).filter(Boolean);
+                const imgs = parseImages(p.images);
                 return (
                   <Link key={p.id} href={`/productos/${p.id}`} className="group bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
                     <div className="relative aspect-square bg-gray-50">

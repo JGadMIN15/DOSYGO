@@ -6,6 +6,7 @@ import { useCartStore } from "@/lib/store";
 import WatchImage from "./WatchImage";
 import { useState } from "react";
 import { formatPrice } from "@/lib/format";
+import { parseImages } from "@/lib/images";
 
 interface Product {
   id: string;
@@ -22,7 +23,7 @@ export default function WatchCard({ product }: { product: Product }) {
   const addItem = useCartStore((s) => s.addItem);
   const [added, setAdded] = useState(false);
   const [wishlisted, setWishlisted] = useState(false);
-  const images: string[] = JSON.parse(product.images);
+  const images = parseImages(product.images);
 
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();

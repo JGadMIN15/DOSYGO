@@ -3,18 +3,13 @@ import { randomInt } from "node:crypto";
 import { signValue, hashToken } from "@/lib/auth";
 import { sendOtpEmail } from "@/lib/email";
 import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/client-ip";
 
 const OTP_COOKIE = "dosygo_email_otp";
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-function clientIp(req: NextRequest): string {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return req.headers.get("x-real-ip") ?? "unknown";
-}
-
 export async function POST(req: NextRequest) {
-  const ip = clientIp(req);
+  const ip = getClientIp(req.headers);
   if (!rateLimit(`otp-send-ip:${ip}`, 5, 10 * 60_000).allowed) {
     return NextResponse.json({ error: "Demasiados envíos. Espera unos minutos." }, { status: 429 });
   }

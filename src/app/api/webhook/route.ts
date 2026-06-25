@@ -125,7 +125,16 @@ export async function POST(req: NextRequest) {
   // the Neon HTTP adapter supports single-statement writes but NOT createMany
   // or nested writes (both run inside a transaction, which it rejects).
   for (const item of itemsMeta) {
-    if (!item.id || !Number.isInteger(item.qty) || item.qty <= 0) continue;
+    if (
+      !item.id ||
+      !Number.isInteger(item.qty) ||
+      item.qty <= 0 ||
+      !Number.isInteger(item.price) ||
+      item.price < 0
+    ) {
+      console.error("Skipping invalid order item in metadata:", trackingCode, item);
+      continue;
+    }
     try {
       await prisma.orderItem.create({
         data: {

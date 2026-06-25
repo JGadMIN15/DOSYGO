@@ -93,14 +93,14 @@ export function verifyPassword(password: string, stored: string): boolean {
 
 function getSecretOrNull(): string | null {
   const secret = process.env.ADMIN_SESSION_SECRET;
-  return secret && secret.length >= 16 ? secret : null;
+  return secret && secret.length >= 32 ? secret : null;
 }
 
 function getSecret(): string {
   const secret = getSecretOrNull();
   if (!secret) {
     throw new Error(
-      "ADMIN_SESSION_SECRET is not set (must be at least 16 characters)"
+      "ADMIN_SESSION_SECRET is not set (must be at least 32 characters)"
     );
   }
   return secret;

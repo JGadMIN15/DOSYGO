@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { rateLimit } from "@/lib/rate-limit";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth";
+import { getClientIp } from "@/lib/client-ip";
 
 // Next.js 16: "middleware" is deprecated and renamed to "proxy". Runs on the
 // nodejs runtime (edge is not supported here).
@@ -11,12 +12,6 @@ const ALLOWED_ORIGINS = new Set([
 ]);
 
 const MAX_BODY_BYTES = 10_000;
-
-function clientIp(req: NextRequest): string {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return req.headers.get("x-real-ip") ?? "unknown";
-}
 
 function tooManyRequests(retryAfterSeconds: number): NextResponse {
   return NextResponse.json(
@@ -52,7 +47,7 @@ export function proxy(req: NextRequest): NextResponse {
     }
   }
 
-  const ip = clientIp(req);
+  const ip = getClientIp(req.headers);
 
   // --- /api/checkout: state-changing and creates (billable) Stripe sessions ---
   if (pathname === "/api/checkout" && req.method === "POST") {

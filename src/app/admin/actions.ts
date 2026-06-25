@@ -17,6 +17,7 @@ import {
   requireRole,
 } from "@/lib/admin-session";
 import { rateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/client-ip";
 import { syncProductToStripe, archiveStripeProduct } from "@/lib/stripe-sync";
 
 export interface ActionState {
@@ -25,10 +26,7 @@ export interface ActionState {
 }
 
 async function clientIp(): Promise<string> {
-  const h = await headers();
-  const forwarded = h.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  return h.get("x-real-ip") ?? "unknown";
+  return getClientIp(await headers());
 }
 
 // Audit trail. Best-effort: a logging failure must never block the action.
@@ -104,7 +102,10 @@ export async function loginAction(
       await prisma.adminUser.update({
         where: { id: user.id },
         data: {
-          failedLoginAttempts: shouldLock ? 0 : attempts,
+          // Keep the counter growing (don't reset on lock) so that once the
+          // lock expires, any further failure re-locks immediately instead of
+          // granting a fresh batch of attempts. Reset only on successful login.
+          failedLoginAttempts: attempts,
           lockedUntil: shouldLock
             ? new Date(Date.now() + LOCK_MINUTES * 60_000)
             : null,
@@ -519,6 +520,9 @@ export async function changeOwnPassword(
   formData: FormData
 ): Promise<ActionState> {
   const session = await requireAdmin();
+  if (!rateLimit(`admin-pwd:${session.sub}`, 5, 10 * 60_000).allowed) {
+    return { error: "Demasiados intentos. Espera unos minutos." };
+  }
   const current = String(formData.get("current") ?? "");
   const next = String(formData.get("next") ?? "");
   if (next.length < MIN_PASSWORD_LENGTH) {

@@ -3,6 +3,7 @@
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
 import {
   SESSION_COOKIE,
   SESSION_TTL_SECONDS,
@@ -51,7 +52,14 @@ export async function clearAdminSession(): Promise<void> {
 export async function requireAdmin(): Promise<SessionPayload> {
   const session = await getAdminSession();
   if (!session) redirect("/admin/login");
-  return session;
+  // Re-validate against the DB so that deleting an account or changing its role
+  // takes effect immediately, instead of trusting the (up to 8h) cookie role.
+  const user = await prisma.adminUser.findUnique({
+    where: { id: session.sub },
+    select: { id: true, email: true, role: true },
+  });
+  if (!user) redirect("/admin/login");
+  return { sub: user.id, email: user.email, role: user.role, exp: session.exp };
 }
 
 /** Require a specific role (e.g. "admin"). Sends others back to the dashboard. */

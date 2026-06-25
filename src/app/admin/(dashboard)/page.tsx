@@ -30,6 +30,32 @@ export default async function AdminDashboardPage() {
       prisma.order.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
     ]);
 
+  // Sales by month (last 12 months) for the audit chart
+  const chartStart = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+  const chartOrders = await prisma.order.findMany({
+    where: { createdAt: { gte: chartStart } },
+    select: { createdAt: true, total: true },
+  });
+  const months = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (11 - i), 1);
+    return {
+      key: `${d.getFullYear()}-${d.getMonth()}`,
+      label: d.toLocaleDateString("es-ES", { month: "short" }),
+      revenue: 0,
+      orders: 0,
+    };
+  });
+  for (const o of chartOrders) {
+    const m = months.find(
+      (x) => x.key === `${o.createdAt.getFullYear()}-${o.createdAt.getMonth()}`
+    );
+    if (m) {
+      m.revenue += o.total;
+      m.orders += 1;
+    }
+  }
+  const maxRevenue = Math.max(1, ...months.map((m) => m.revenue));
+
   const kpis = [
     { label: "Ingresos (total)", value: eur(allAgg._sum.total ?? 0) },
     { label: "Ingresos (este mes)", value: eur(monthAgg._sum.total ?? 0) },
@@ -74,6 +100,35 @@ export default async function AdminDashboardPage() {
         <Link href="/admin/vendidos" className="rounded-lg border border-gray-300 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
           Vendidos
         </Link>
+      </div>
+
+      {/* Sales chart (last 12 months) */}
+      <div className="bg-white rounded-xl border border-gray-200 p-5 mb-8">
+        <h2 className="font-semibold text-gray-900 text-sm mb-4">
+          Ventas por mes (últimos 12 meses)
+        </h2>
+        <div className="flex items-end gap-1.5 h-40">
+          {months.map((m) => (
+            <div
+              key={m.key}
+              className="flex-1 flex flex-col items-center justify-end gap-1 h-full"
+              title={`${m.label}: ${eur(m.revenue)} · ${m.orders} ${m.orders === 1 ? "pedido" : "pedidos"}`}
+            >
+              <div
+                className="w-full rounded-t transition-all"
+                style={{
+                  height: `${(m.revenue / maxRevenue) * 100}%`,
+                  minHeight: m.revenue > 0 ? "4px" : "2px",
+                  background: m.revenue > 0 ? "var(--brand, #dc2626)" : "#e5e7eb",
+                }}
+              />
+              <span className="text-[10px] text-gray-400 capitalize">{m.label}</span>
+            </div>
+          ))}
+        </div>
+        <p className="text-xs text-gray-400 mt-3">
+          Pasa el ratón sobre cada barra para ver ingresos y nº de pedidos.
+        </p>
       </div>
 
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
