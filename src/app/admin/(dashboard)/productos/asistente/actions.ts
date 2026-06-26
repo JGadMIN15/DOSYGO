@@ -31,7 +31,7 @@ import type {
 } from "./types";
 
 const MAX = { name: 200, brand: 100, category: 100, description: 5000 } as const;
-const MAX_IMAGES = 8;
+const MAX_IMAGES = 5; // matches the vision model's per-request image cap
 
 async function clientIp(): Promise<string> {
   return getClientIp(await headers());

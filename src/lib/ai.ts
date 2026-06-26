@@ -1,25 +1,20 @@
-// Claude-powered helpers for the product assistant.
+// AI helpers for the product assistant, using Groq (free tier, no credit card)
+// with a multimodal Llama 4 model. Groq exposes an OpenAI-compatible REST API.
 //
-// Uses the official Anthropic SDK (@anthropic-ai/sdk). All structured results
-// are obtained via forced tool use (strict schema) so the output always matches
-// the shape we expect; the one exception is market research, which uses the
-// server-side web_search tool and returns JSON text we parse defensively.
+// We use Groq because it offers a genuinely free tier with NO credit card and a
+// vision-capable model (needed to verify the watch photos). Structured results
+// are requested as JSON in the prompt and parsed defensively.
 //
-// Everything here runs server-side (imported only from Server Actions). It
-// never throws for "soft" failures the caller can tolerate — those return null.
+// Free-tier limitation: no live web search, so the market price is an
+// APPROXIMATE estimate from the model's own knowledge (labelled in the UI),
+// not scraped from real listings.
+//
+// Everything here runs server-side. Needs GROQ_API_KEY. If Groq deprecates the
+// model id below, update MODEL (see https://console.groq.com/docs/models).
 
-import Anthropic from "@anthropic-ai/sdk";
-
-const MODEL = "claude-opus-4-8";
-
-let cached: Anthropic | null = null;
-function client(): Anthropic {
-  if (!process.env.ANTHROPIC_API_KEY) {
-    throw new Error("ANTHROPIC_API_KEY no está configurada.");
-  }
-  cached ??= new Anthropic();
-  return cached;
-}
+const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
+const ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
+const MAX_VISION_IMAGES = 5;
 
 export type SupportedMediaType =
   | "image/jpeg"
@@ -31,7 +26,7 @@ export interface ParsedQuery {
   brand: string;
   model: string;
   reference: string;
-  costEuros: number; // price the admin found it at (their cost)
+  costEuros: number;
 }
 
 export interface MarketResearch {
@@ -39,7 +34,7 @@ export interface MarketResearch {
   marketMinEuros: number;
   marketMaxEuros: number;
   demand: "alta" | "media" | "baja";
-  estimatedTimeToSell: string; // orientativo, e.g. "2 a 4 semanas"
+  estimatedTimeToSell: string;
   rationale: string;
   sources: string[];
 }
@@ -61,165 +56,137 @@ export interface GeneratedListing {
   description: string;
 }
 
-// --- Generic forced-tool call ----------------------------------------------
+// --- REST plumbing ----------------------------------------------------------
 
-async function callTool<T>(params: {
-  system: string;
-  content: string | Anthropic.ContentBlockParam[];
-  toolName: string;
-  toolDescription: string;
-  schema: Record<string, unknown>;
-  maxTokens?: number;
-}): Promise<T> {
-  const tool = {
-    name: params.toolName,
-    description: params.toolDescription,
-    input_schema: params.schema,
-    strict: true,
-  } as unknown as Anthropic.Tool;
+type ContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
 
-  const resp = await client().messages.create({
-    model: MODEL,
-    max_tokens: params.maxTokens ?? 1500,
-    system: params.system,
-    tools: [tool],
-    tool_choice: { type: "tool", name: params.toolName },
-    messages: [{ role: "user", content: params.content }],
-  });
-
-  if (resp.stop_reason === "refusal") {
-    throw new Error("La IA rechazó procesar esta solicitud.");
-  }
-  const block = resp.content.find((b) => b.type === "tool_use");
-  if (!block || block.type !== "tool_use") {
-    throw new Error("La IA no devolvió datos estructurados.");
-  }
-  return block.input as T;
+interface ChatMessage {
+  role: "system" | "user";
+  content: string | ContentPart[];
 }
+
+interface GroqResponse {
+  choices?: { message?: { content?: string } }[];
+}
+
+function apiKey(): string {
+  const k = process.env.GROQ_API_KEY;
+  if (!k) throw new Error("GROQ_API_KEY no está configurada.");
+  return k;
+}
+
+async function groqChat(
+  messages: ChatMessage[],
+  opts: { temperature?: number; maxTokens?: number } = {}
+): Promise<string> {
+  const res = await fetch(ENDPOINT, {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${apiKey()}`,
+      "content-type": "application/json",
+    },
+    body: JSON.stringify({
+      model: MODEL,
+      messages,
+      temperature: opts.temperature ?? 0.4,
+      max_tokens: opts.maxTokens ?? 2048,
+    }),
+  });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => "");
+    if (res.status === 429) {
+      throw new Error("Límite gratuito de Groq alcanzado; espera un momento.");
+    }
+    if (res.status === 400 && /decommission|not found|does not exist/i.test(detail)) {
+      throw new Error(
+        "El modelo de IA ya no está disponible en Groq; hay que actualizar el identificador del modelo."
+      );
+    }
+    throw new Error(`Error de la IA (HTTP ${res.status}). ${detail.slice(0, 160)}`);
+  }
+  const data = (await res.json()) as GroqResponse;
+  const text = data.choices?.[0]?.message?.content ?? "";
+  if (!text.trim()) throw new Error("La IA no devolvió respuesta.");
+  return text;
+}
+
+// Llama returns the JSON object possibly wrapped in prose/markdown — extract it.
+function parseJsonLoose<T>(text: string): T {
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start === -1 || end <= start) throw new Error("La IA no devolvió JSON válido.");
+  return JSON.parse(text.slice(start, end + 1)) as T;
+}
+
+const str = (v: unknown): string => (typeof v === "string" ? v : "");
+const oneOf = <T extends string>(v: unknown, allowed: readonly T[], dflt: T): T =>
+  allowed.includes(v as T) ? (v as T) : dflt;
+const num = (v: unknown): number => (Number.isFinite(Number(v)) ? Number(v) : 0);
 
 // --- 1. Parse the free-text query ------------------------------------------
 
 export async function parseProductQuery(text: string): Promise<ParsedQuery> {
-  const out = await callTool<ParsedQuery>({
-    system:
-      "Extraes datos de un reloj a partir del mensaje del administrador de una tienda. " +
-      "El precio que menciona es el COSTE en euros al que ha encontrado el reloj (su precio de compra), no el de venta. " +
-      "Si no menciona un precio, devuelve 0. Devuelve la marca, el modelo y la referencia (código del modelo, p. ej. AR11637) si aparece; si no hay referencia, cadena vacía.",
-    content: text.slice(0, 600),
-    toolName: "record_product_query",
-    toolDescription: "Registra los datos del reloj extraídos del mensaje.",
-    schema: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        brand: { type: "string", description: "Marca del reloj" },
-        model: { type: "string", description: "Nombre/modelo del reloj" },
-        reference: {
-          type: "string",
-          description: "Referencia o código del modelo, o cadena vacía",
-        },
-        costEuros: {
-          type: "number",
-          description: "Precio de coste en euros mencionado, o 0",
-        },
+  const raw = await groqChat(
+    [
+      {
+        role: "system",
+        content:
+          "Extraes datos de un reloj del mensaje del administrador de una tienda. " +
+          "El precio que menciona es el COSTE en euros al que ha encontrado el reloj (su compra), no el de venta. " +
+          "Si no menciona precio, costEuros = 0. Devuelve la referencia/código del modelo (p. ej. AR11637) si aparece; si no, cadena vacía. " +
+          'Responde ÚNICAMENTE con un objeto JSON, sin texto ni markdown, con esta forma exacta: ' +
+          '{"brand": string, "model": string, "reference": string, "costEuros": number}',
       },
-      required: ["brand", "model", "reference", "costEuros"],
-    },
-    maxTokens: 400,
-  });
+      { role: "user", content: text.slice(0, 600) },
+    ],
+    { temperature: 0, maxTokens: 256 }
+  );
+  const out = parseJsonLoose<Partial<ParsedQuery>>(raw);
   return {
-    brand: String(out.brand ?? "").trim(),
-    model: String(out.model ?? "").trim(),
-    reference: String(out.reference ?? "").trim(),
-    costEuros: Number.isFinite(out.costEuros) ? Number(out.costEuros) : 0,
+    brand: str(out.brand).trim(),
+    model: str(out.model).trim(),
+    reference: str(out.reference).trim(),
+    costEuros: num(out.costEuros),
   };
 }
 
-// --- 2. Market research (price + demand) via web search --------------------
+// --- 2. Market estimate (no live search on the free tier) ------------------
 
-function extractJson(text: string): Record<string, unknown> | null {
-  const start = text.indexOf("{");
-  const end = text.lastIndexOf("}");
-  if (start === -1 || end <= start) return null;
+export async function researchMarket(q: ParsedQuery): Promise<MarketResearch | null> {
   try {
-    return JSON.parse(text.slice(start, end + 1));
-  } catch {
-    return null;
-  }
-}
-
-export async function researchMarket(
-  q: ParsedQuery
-): Promise<MarketResearch | null> {
-  try {
-    const system =
-      "Eres analista de una tienda de relojes en España. Investigas en internet el precio de venta habitual de un reloj concreto " +
-      "(preferentemente en tiendas y marketplaces de España/UE) y estimas su demanda. " +
-      "Recomienda un precio de VENTA competitivo: alineado con el mercado y por encima del coste con un margen razonable. " +
-      "La estimación de cuánto tarda en venderse es ORIENTATIVA (no hay datos reales del producto nuevo): básala en la popularidad/demanda del modelo. " +
-      "No inventes cifras: si no encuentras precios, sé conservador y dilo en 'rationale'.";
-    const userText =
-      `Reloj: ${q.brand} ${q.model} ${q.reference}`.trim() +
-      `. Coste de adquisición: ${q.costEuros} €. ` +
-      "Busca su precio de venta habitual y recomienda un precio de venta. Estima la demanda y cuánto suele tardar en venderse un modelo así. " +
-      'Responde ÚNICAMENTE con un objeto JSON válido (sin markdown ni texto extra) con esta forma exacta: ' +
-      '{"recommendedPriceEuros": number, "marketMinEuros": number, "marketMaxEuros": number, ' +
-      '"demand": "alta"|"media"|"baja", "estimatedTimeToSell": string, "rationale": string, "sources": string[]}';
-
-    const messages: Anthropic.MessageParam[] = [
-      { role: "user", content: userText },
-    ];
-    let resp = await client().messages.create({
-      model: MODEL,
-      max_tokens: 2000,
-      system,
-      tools: [{ type: "web_search_20260209", name: "web_search", max_uses: 5 }],
-      messages,
-    });
-
-    // Server-tool loop may pause; resume a bounded number of times.
-    let guard = 0;
-    while (resp.stop_reason === "pause_turn" && guard < 3) {
-      guard += 1;
-      messages.push({
-        role: "assistant",
-        content: resp.content as Anthropic.ContentBlockParam[],
-      });
-      resp = await client().messages.create({
-        model: MODEL,
-        max_tokens: 2000,
-        system,
-        tools: [
-          { type: "web_search_20260209", name: "web_search", max_uses: 5 },
-        ],
-        messages,
-      });
-    }
-
-    if (resp.stop_reason === "refusal") return null;
-
-    const text = resp.content
-      .filter((b): b is Anthropic.TextBlock => b.type === "text")
-      .map((b) => b.text)
-      .join("\n");
-    const json = extractJson(text);
-    if (!json) return null;
-
-    const demandRaw = String(json.demand ?? "media");
-    const demand: MarketResearch["demand"] =
-      demandRaw === "alta" || demandRaw === "baja" ? demandRaw : "media";
-    const num = (v: unknown): number => (Number.isFinite(Number(v)) ? Number(v) : 0);
-
+    const raw = await groqChat(
+      [
+        {
+          role: "system",
+          content:
+            "Eres analista de una tienda de relojes en España. No inventes cifras: si no tienes datos suficientes, sé conservador y dilo en 'rationale'. " +
+            'Responde ÚNICAMENTE con un objeto JSON, sin texto ni markdown, con esta forma exacta: ' +
+            '{"recommendedPriceEuros": number, "marketMinEuros": number, "marketMaxEuros": number, ' +
+            '"demand": "alta"|"media"|"baja", "estimatedTimeToSell": string, "rationale": string, "sources": []}',
+        },
+        {
+          role: "user",
+          content:
+            `Reloj: ${q.brand} ${q.model} ${q.reference}`.trim() +
+            `. Coste de adquisición: ${q.costEuros} €. ` +
+            "Estima su precio de venta habitual en España/UE y recomienda un precio de venta competitivo " +
+            "(por encima del coste, con margen razonable). Estima la demanda y cuánto suele tardar en venderse un modelo así. " +
+            "Es una ESTIMACIÓN aproximada basada en tu conocimiento (sin búsqueda en vivo); indícalo en 'rationale'.",
+        },
+      ],
+      { temperature: 0.3, maxTokens: 700 }
+    );
+    const out = parseJsonLoose<Partial<MarketResearch>>(raw);
     return {
-      recommendedPriceEuros: Math.round(num(json.recommendedPriceEuros)),
-      marketMinEuros: Math.round(num(json.marketMinEuros)),
-      marketMaxEuros: Math.round(num(json.marketMaxEuros)),
-      demand,
-      estimatedTimeToSell: String(json.estimatedTimeToSell ?? "").slice(0, 120),
-      rationale: String(json.rationale ?? "").slice(0, 800),
-      sources: Array.isArray(json.sources)
-        ? json.sources.map((s) => String(s).slice(0, 160)).slice(0, 6)
-        : [],
+      recommendedPriceEuros: Math.round(num(out.recommendedPriceEuros)),
+      marketMinEuros: Math.round(num(out.marketMinEuros)),
+      marketMaxEuros: Math.round(num(out.marketMaxEuros)),
+      demand: oneOf(out.demand, ["alta", "media", "baja"] as const, "media"),
+      estimatedTimeToSell: str(out.estimatedTimeToSell).slice(0, 120),
+      rationale: str(out.rationale).slice(0, 800),
+      sources: [],
     };
   } catch (err) {
     console.error("researchMarket failed:", err);
@@ -234,79 +201,62 @@ export async function assessWatchImages(
   q: ParsedQuery
 ): Promise<ImageAssessment[]> {
   if (images.length === 0) return [];
+  const batch = images.slice(0, MAX_VISION_IMAGES);
 
-  const content: Anthropic.ContentBlockParam[] = images.map((img) => ({
-    type: "image",
-    source: { type: "base64", media_type: img.mediaType, data: img.data },
-  }));
-  content.push({
-    type: "text",
-    text:
-      `Estás validando fotos de producto para una tienda de relojes. Reloj objetivo: ` +
-      `${q.brand} ${q.model} ${q.reference}`.trim() +
-      `. Evalúa CADA imagen en orden (índice empezando en 0):\n` +
-      "- isWatch: ¿muestra un reloj de pulsera?\n" +
-      "- matchesModel: ¿corresponde de forma plausible a ese modelo/marca?\n" +
-      "- confidence: tu confianza (alta/media/baja).\n" +
-      "- brandVisible: ¿se ve el logo o nombre de la marca?\n" +
-      "- legalRiskLevel: riesgo legal EVIDENTE de usar la imagen (ninguno/bajo/alto). " +
-      "Marca 'alto' si hay marcas de agua, sellos de banco de imágenes (Getty, Shutterstock, Alamy, iStock), " +
-      "o el logo/nombre de otra tienda online sobre la foto.\n" +
-      "- legalReasons: motivos breves del riesgo (vacío si ninguno).\n" +
-      "- note: observación breve.",
-  });
-
-  const out = await callTool<{ results: ImageAssessment[] }>({
-    system:
-      "Analizas imágenes y devuelves una evaluación objetiva por imagen. " +
-      "No garantizas la titularidad de derechos; solo señalas riesgos visibles.",
-    content,
-    toolName: "report_image_assessment",
-    toolDescription: "Devuelve la evaluación de cada imagen, en orden.",
-    schema: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        results: {
-          type: "array",
-          items: {
-            type: "object",
-            additionalProperties: false,
-            properties: {
-              index: { type: "integer" },
-              isWatch: { type: "boolean" },
-              matchesModel: { type: "boolean" },
-              confidence: { type: "string", enum: ["alta", "media", "baja"] },
-              brandVisible: { type: "boolean" },
-              legalRiskLevel: {
-                type: "string",
-                enum: ["ninguno", "bajo", "alto"],
-              },
-              legalReasons: { type: "array", items: { type: "string" } },
-              note: { type: "string" },
-            },
-            required: [
-              "index",
-              "isWatch",
-              "matchesModel",
-              "confidence",
-              "brandVisible",
-              "legalRiskLevel",
-              "legalReasons",
-              "note",
-            ],
-          },
-        },
-      },
-      required: ["results"],
+  const content: ContentPart[] = [
+    {
+      type: "text",
+      text:
+        `Validas fotos de producto para una tienda de relojes. Reloj objetivo: ` +
+        `${q.brand} ${q.model} ${q.reference}`.trim() +
+        `. Te paso ${batch.length} imágenes EN ORDEN (índice empezando en 0). Evalúa CADA una:\n` +
+        "- isWatch: ¿muestra un reloj de pulsera?\n" +
+        "- matchesModel: ¿corresponde de forma plausible a ese modelo/marca?\n" +
+        "- confidence: alta, media o baja.\n" +
+        "- brandVisible: ¿se ve el logo o nombre de la marca?\n" +
+        "- legalRiskLevel: riesgo legal EVIDENTE de usar la imagen: ninguno, bajo o alto. " +
+        "Marca 'alto' si hay marcas de agua, sellos de banco de imágenes (Getty, Shutterstock, Alamy, iStock) " +
+        "o el logo/nombre de otra tienda online sobre la foto.\n" +
+        "- legalReasons: lista de motivos breves (vacía si ninguno).\n" +
+        "- note: observación breve.\n" +
+        'Responde ÚNICAMENTE con un objeto JSON, sin texto ni markdown, con esta forma exacta: ' +
+        '{"results": [{"index": number, "isWatch": boolean, "matchesModel": boolean, ' +
+        '"confidence": "alta"|"media"|"baja", "brandVisible": boolean, ' +
+        '"legalRiskLevel": "ninguno"|"bajo"|"alto", "legalReasons": string[], "note": string}]}',
     },
-    maxTokens: 2500,
-  });
+    ...batch.map(
+      (img): ContentPart => ({
+        type: "image_url",
+        image_url: { url: `data:${img.mediaType};base64,${img.data}` },
+      })
+    ),
+  ];
 
-  return Array.isArray(out.results) ? out.results : [];
+  const raw = await groqChat([{ role: "user", content }], {
+    temperature: 0,
+    maxTokens: 2048,
+  });
+  const out = parseJsonLoose<{ results?: Partial<ImageAssessment>[] }>(raw);
+
+  return (out.results ?? []).map((r, i) => ({
+    index: Number.isInteger(r.index) ? Number(r.index) : i,
+    isWatch: Boolean(r.isWatch),
+    matchesModel: Boolean(r.matchesModel),
+    confidence: oneOf(r.confidence, ["alta", "media", "baja"] as const, "media"),
+    brandVisible: Boolean(r.brandVisible),
+    legalRiskLevel: oneOf(
+      r.legalRiskLevel,
+      ["ninguno", "bajo", "alto"] as const,
+      "bajo"
+    ),
+    legalReasons: Array.isArray(r.legalReasons)
+      ? r.legalReasons.map((x) => str(x)).filter(Boolean)
+      : [],
+    note: str(r.note),
+  }));
 }
 
-// --- 4. Generate the listing (name + category + description) ---------------
+// --- 4. Generate the listing -----------------------------------------------
 
 export async function generateListing(
   q: ParsedQuery,
@@ -318,33 +268,33 @@ export async function generateListing(
     .map((d, i) => `Ejemplo ${i + 1}: ${d}`)
     .join("\n\n");
   const categoryText = categories.length
-    ? `Categorías existentes en la tienda: ${categories.join(", ")}. Usa una de ellas si encaja; si no, propón una breve y coherente.`
-    : "Propón una categoría breve y coherente (p. ej. Cronógrafos, Automáticos, Deportivos).";
+    ? `Categorías existentes en la tienda: ${categories.join(", ")}. Usa una si encaja; si no, propón una breve y coherente.`
+    : "Propón una categoría breve (p. ej. Cronógrafos, Automáticos, Deportivos).";
 
-  return callTool<GeneratedListing>({
-    system:
-      "Redactas fichas de producto para una tienda de relojes en español (España), con el MISMO estilo, tono y longitud que los ejemplos. " +
-      "La descripción debe tener entre 50 y 90 palabras, mencionar aspectos como caja/material, movimiento, cristal, resistencia al agua y correa cuando proceda, " +
-      "y terminar con un breve toque de marca. No incluyas el precio. " +
-      "IMPORTANTE: no inventes datos técnicos concretos que no puedas conocer con certeza (medidas exactas, materiales): si no estás seguro, descríbelo de forma genérica y veraz.",
-    content:
-      `Reloj: ${q.brand} ${q.model} ${q.reference}`.trim() +
-      `\n\n${categoryText}\n\n${exampleText || "(no hay ejemplos previos)"}`,
-    toolName: "write_listing",
-    toolDescription: "Devuelve el nombre, la categoría y la descripción del producto.",
-    schema: {
-      type: "object",
-      additionalProperties: false,
-      properties: {
-        name: { type: "string", description: "Nombre comercial del producto" },
-        category: { type: "string", description: "Categoría del producto" },
-        description: {
-          type: "string",
-          description: "Descripción en español, 50-90 palabras",
-        },
+  const raw = await groqChat(
+    [
+      {
+        role: "system",
+        content:
+          "Redactas fichas de producto para una tienda de relojes en español (España), con el MISMO estilo, tono y longitud que los ejemplos. " +
+          "La descripción debe tener entre 50 y 90 palabras, mencionar aspectos como caja/material, movimiento, cristal, resistencia al agua y correa cuando proceda, y terminar con un breve toque de marca. No incluyas el precio. " +
+          "No inventes datos técnicos concretos que no puedas conocer con certeza (medidas exactas, materiales): si no estás seguro, descríbelo de forma genérica y veraz. " +
+          'Responde ÚNICAMENTE con un objeto JSON, sin texto ni markdown, con esta forma exacta: ' +
+          '{"name": string, "category": string, "description": string}',
       },
-      required: ["name", "category", "description"],
-    },
-    maxTokens: 900,
-  });
+      {
+        role: "user",
+        content:
+          `Reloj: ${q.brand} ${q.model} ${q.reference}`.trim() +
+          `\n\n${categoryText}\n\n${exampleText || "(no hay ejemplos previos)"}`,
+      },
+    ],
+    { temperature: 0.7, maxTokens: 700 }
+  );
+  const out = parseJsonLoose<Partial<GeneratedListing>>(raw);
+  return {
+    name: str(out.name).trim(),
+    category: str(out.category).trim(),
+    description: str(out.description).trim(),
+  };
 }

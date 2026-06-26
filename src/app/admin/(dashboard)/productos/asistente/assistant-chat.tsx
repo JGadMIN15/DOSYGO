@@ -105,8 +105,8 @@ export default function AssistantChat() {
     );
     if (res.market) {
       parts.push(
-        `Precio de venta recomendado: ${res.market.recommendedPriceEuros} € ` +
-          `(mercado ~${res.market.marketMinEuros}–${res.market.marketMaxEuros} €). ` +
+        `Precio de venta recomendado (estimación aproximada): ${res.market.recommendedPriceEuros} € ` +
+          `(rango ~${res.market.marketMinEuros}–${res.market.marketMaxEuros} €). ` +
           `Demanda ${res.market.demand}; tiempo estimado de venta (orientativo): ${res.market.estimatedTimeToSell}.`
       );
     }
@@ -332,9 +332,11 @@ export default function AssistantChat() {
             {/* Market */}
             {market && (
               <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm">
-                <p className="font-semibold text-gray-900 mb-1">Análisis de mercado</p>
+                <p className="font-semibold text-gray-900 mb-1">
+                  Estimación de precio <span className="font-normal text-gray-400">(aproximada, sin búsqueda en vivo)</span>
+                </p>
                 <p className="text-gray-700">
-                  Recomendado: <strong>{market.recommendedPriceEuros} €</strong> · Mercado ~
+                  Recomendado: <strong>{market.recommendedPriceEuros} €</strong> · Rango estimado ~
                   {market.marketMinEuros}–{market.marketMaxEuros} €
                 </p>
                 <p className="text-gray-700">
