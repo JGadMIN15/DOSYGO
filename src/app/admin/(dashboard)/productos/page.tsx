@@ -64,13 +64,21 @@ export default async function AdminProductsPage({
             {q ? ` · búsqueda: "${q}"` : ""}
           </p>
         </div>
-        <Link
-          href="/admin/productos/nuevo"
-          className="rounded-lg px-4 py-2.5 text-sm font-semibold text-white"
-          style={{ background: "var(--brand, #dc2626)" }}
-        >
-          + Añadir producto
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/productos/asistente"
+            className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-semibold text-gray-800 hover:bg-gray-50"
+          >
+            ✨ Asistente IA
+          </Link>
+          <Link
+            href="/admin/productos/nuevo"
+            className="rounded-lg px-4 py-2.5 text-sm font-semibold text-white"
+            style={{ background: "var(--brand, #dc2626)" }}
+          >
+            + Añadir producto
+          </Link>
+        </div>
       </div>
 
       <form method="GET" className="flex gap-2 mb-5">

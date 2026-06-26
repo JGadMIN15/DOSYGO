@@ -3,7 +3,7 @@ import { getStripe } from "@/lib/stripe";
 export interface ProductForStripe {
   name: string;
   description: string;
-  price: number; // euros
+  price: number; // céntimos
   images: string; // JSON array of URLs/paths
   stripeProductId: string | null;
   stripePriceId: string | null;
@@ -39,7 +39,7 @@ export async function syncProductToStripe(product: ProductForStripe): Promise<{
 }> {
   const stripe = getStripe();
   const images = absoluteImageUrls(product.images);
-  const unitAmount = Math.round(product.price * 100);
+  const unitAmount = product.price; // ya en céntimos
   const description = product.description.slice(0, 5000);
 
   // --- Product (create or update) ---

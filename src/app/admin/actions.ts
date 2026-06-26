@@ -18,7 +18,12 @@ import {
 } from "@/lib/admin-session";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/client-ip";
-import { syncProductToStripe, archiveStripeProduct } from "@/lib/stripe-sync";
+import { archiveStripeProduct } from "@/lib/stripe-sync";
+import {
+  createProductRecord,
+  syncProductRecord,
+  type ProductData,
+} from "@/lib/products";
 
 export interface ActionState {
   error?: string;
@@ -184,18 +189,6 @@ export async function activateAccount(
 const MAX = { name: 200, brand: 100, category: 100, description: 5000 } as const;
 const CUID_RE = /^c[a-z0-9]{24,}$/i;
 
-interface ProductData {
-  name: string;
-  brand: string;
-  category: string;
-  description: string;
-  price: number;
-  stock: number;
-  featured: boolean;
-  images: string;
-  availableUntil: Date | null;
-}
-
 function isHttpsUrl(value: string): boolean {
   try {
     return new URL(value).protocol === "https:";
@@ -280,25 +273,6 @@ function parseProductForm(
   };
 }
 
-// Mirror a product to Stripe and persist the returned ids. Non-fatal: a Stripe
-// outage or misconfigured key must never block managing the catalog.
-async function syncProductRecord(product: {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  images: string;
-  stripeProductId: string | null;
-  stripePriceId: string | null;
-}): Promise<void> {
-  try {
-    const ids = await syncProductToStripe(product);
-    await prisma.product.update({ where: { id: product.id }, data: ids });
-  } catch (err) {
-    console.error("Stripe product sync failed (product saved in DB):", err);
-  }
-}
-
 export async function createProduct(
   _prev: ActionState,
   formData: FormData
@@ -308,8 +282,7 @@ export async function createProduct(
   const parsed = parseProductForm(formData);
   if ("error" in parsed) return { error: parsed.error };
 
-  const product = await prisma.product.create({ data: parsed.data });
-  await syncProductRecord(product);
+  const product = await createProductRecord(parsed.data);
   await logAudit({
     adminEmail: session.email,
     action: "product_create",
