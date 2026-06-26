@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import { assistantPrepare, assistantCreate } from "./actions";
-import type { PrepareResult } from "./types";
+import {
+  assistantPrepare,
+  assistantVerifyImages,
+  assistantCreate,
+} from "./actions";
+import type { AssistantCandidate, PrepareResult } from "./types";
 
 interface Bubble {
   role: "assistant" | "user";
@@ -40,7 +44,16 @@ export default function AssistantChat() {
   const [stock, setStock] = useState("1");
   const [featured, setFeatured] = useState(false);
   const [availableUntil, setAvailableUntil] = useState("");
+
+  // Images
+  const [pendingUrls, setPendingUrls] = useState<string[]>([]);
+  const [urlInput, setUrlInput] = useState("");
+  const [verified, setVerified] = useState<AssistantCandidate[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
+  const [verifying, setVerifying] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+
   const [createdId, setCreatedId] = useState<string | null>(null);
 
   function say(role: Bubble["role"], text: string) {
@@ -53,7 +66,7 @@ export default function AssistantChat() {
     setError(null);
     setInput("");
     say("user", text);
-    say("assistant", "Buscando imágenes, estimando precio y redactando la ficha… (puede tardar un poco)");
+    say("assistant", "Estimando precio de mercado y redactando la ficha… (puede tardar un poco)");
     setPhase("loading");
 
     let res: PrepareResult;
@@ -85,7 +98,6 @@ export default function AssistantChat() {
           ? res.query.costEuros
           : 0;
     setPriceEuros(recommended > 0 ? String(recommended) : "");
-    setSelected((res.candidates ?? []).filter((c) => c.recommended).map((c) => c.url));
 
     const parts: string[] = [];
     parts.push(
@@ -98,13 +110,78 @@ export default function AssistantChat() {
           `Demanda ${res.market.demand}; tiempo estimado de venta (orientativo): ${res.market.estimatedTimeToSell}.`
       );
     }
-    parts.push(
-      `Encontré ${res.candidates?.length ?? 0} imágenes verificadas.`
-    );
-    parts.push("Revisa los datos abajo, elige las imágenes e indica hasta cuándo estará disponible (opcional). Cuando quieras, pulsa Publicar.");
+    parts.push("Ahora añade las imágenes (súbelas o pega su URL) y pulsa «Verificar imágenes». Luego revisa los datos y publica.");
     say("assistant", parts.join(" "));
     (res.warnings ?? []).forEach((w) => say("assistant", "Aviso: " + w));
     setPhase("review");
+  }
+
+  function addUrl() {
+    const u = urlInput.trim();
+    if (!u) return;
+    if (!/^https:\/\//i.test(u)) {
+      setError("La URL debe empezar por https://");
+      return;
+    }
+    setError(null);
+    setPendingUrls((p) => (p.includes(u) ? p : [...p, u]));
+    setUrlInput("");
+  }
+
+  async function handleUpload(file: File) {
+    setError(null);
+    setUploading(true);
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+      const data = (await res.json()) as { url?: string; error?: string };
+      if (!res.ok || !data.url) {
+        setError(data.error ?? "No se pudo subir la imagen.");
+        return;
+      }
+      setPendingUrls((p) => [...p, data.url as string]);
+    } catch {
+      setError("No se pudo subir la imagen.");
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function handleVerify() {
+    if (pendingUrls.length === 0 || !result?.query) return;
+    setError(null);
+    setVerifying(true);
+    try {
+      const res = await assistantVerifyImages(pendingUrls, {
+        brand,
+        model: result.query.model,
+        reference: result.query.reference,
+        costEuros: result.query.costEuros,
+      });
+      if (!res.ok) {
+        setError(res.error ?? "No se pudo verificar.");
+        return;
+      }
+      const next = [...verified];
+      for (const c of res.candidates ?? []) {
+        if (!next.some((v) => v.url === c.url)) next.push(c);
+      }
+      setVerified(next);
+      setSelected((s) => [
+        ...s,
+        ...(res.candidates ?? [])
+          .filter((c) => c.recommended && !s.includes(c.url))
+          .map((c) => c.url),
+      ]);
+      setPendingUrls([]);
+      (res.warnings ?? []).forEach((w) => say("assistant", "Aviso: " + w));
+    } catch {
+      setError("No se pudo verificar las imágenes.");
+    } finally {
+      setVerifying(false);
+    }
   }
 
   function toggleImage(url: string) {
@@ -114,7 +191,7 @@ export default function AssistantChat() {
   async function handlePublish() {
     setError(null);
     if (selected.length === 0) {
-      setError("Selecciona al menos una imagen.");
+      setError("Selecciona al menos una imagen verificada.");
       return;
     }
     setPhase("publishing");
@@ -155,6 +232,9 @@ export default function AssistantChat() {
     setStock("1");
     setFeatured(false);
     setAvailableUntil("");
+    setPendingUrls([]);
+    setUrlInput("");
+    setVerified([]);
     setSelected([]);
     setCreatedId(null);
     setMessages([{ role: "assistant", text: INTRO }]);
@@ -162,7 +242,6 @@ export default function AssistantChat() {
   }
 
   const market = result?.market;
-  const candidates = result?.candidates ?? [];
 
   return (
     <div className="grid gap-6 lg:grid-cols-2">
@@ -239,34 +318,28 @@ export default function AssistantChat() {
                   Editar este producto
                 </Link>
               )}
-              <button
-                onClick={reset}
-                className="text-sm text-gray-500 hover:text-gray-900 mt-2"
-              >
+              <button onClick={reset} className="text-sm text-gray-500 hover:text-gray-900 mt-2">
                 Añadir otro
               </button>
             </div>
           </div>
         ) : !result ? (
           <div className="text-sm text-gray-400 h-full flex items-center justify-center text-center px-6">
-            La ficha preparada aparecerá aquí para que la revises antes de
-            publicar.
+            La ficha preparada aparecerá aquí para que la revises antes de publicar.
           </div>
         ) : (
           <div className="space-y-5">
             {/* Market */}
             {market && (
               <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm">
-                <p className="font-semibold text-gray-900 mb-1">
-                  Análisis de mercado
+                <p className="font-semibold text-gray-900 mb-1">Análisis de mercado</p>
+                <p className="text-gray-700">
+                  Recomendado: <strong>{market.recommendedPriceEuros} €</strong> · Mercado ~
+                  {market.marketMinEuros}–{market.marketMaxEuros} €
                 </p>
                 <p className="text-gray-700">
-                  Recomendado: <strong>{market.recommendedPriceEuros} €</strong>{" "}
-                  · Mercado ~{market.marketMinEuros}–{market.marketMaxEuros} €
-                </p>
-                <p className="text-gray-700">
-                  Demanda: <strong>{market.demand}</strong> · Tiempo estimado de
-                  venta (orientativo): {market.estimatedTimeToSell}
+                  Demanda: <strong>{market.demand}</strong> · Tiempo estimado de venta
+                  (orientativo): {market.estimatedTimeToSell}
                 </p>
                 {market.rationale && (
                   <p className="text-gray-500 mt-1 text-xs">{market.rationale}</p>
@@ -279,27 +352,96 @@ export default function AssistantChat() {
               </div>
             )}
 
-            {/* Legal caveat */}
-            <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800">
-              La IA marca riesgos <strong>evidentes</strong> (marcas de agua,
-              logos de tiendas, sellos de stock), pero <strong>no garantiza</strong>{" "}
-              que una imagen esté libre de derechos. Usa preferentemente fotos
-              oficiales o propias y revisa antes de publicar.
-            </div>
-
             {/* Images */}
             <div>
-              <p className="text-sm font-semibold text-gray-900 mb-2">
-                Imágenes ({selected.length} seleccionadas)
-              </p>
-              {candidates.length === 0 ? (
-                <p className="text-xs text-gray-500">
-                  No hay imágenes verificadas. Puedes crear el producto y añadir
-                  imágenes después desde el editor.
-                </p>
-              ) : (
+              <p className="text-sm font-semibold text-gray-900 mb-1">Imágenes</p>
+              <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 mb-3">
+                La IA marca riesgos <strong>evidentes</strong> (marcas de agua, logos de
+                tiendas, sellos de stock), pero <strong>no garantiza</strong> que una imagen
+                esté libre de derechos. Usa preferentemente fotos oficiales o propias.
+              </div>
+
+              {/* Add controls */}
+              <div className="flex flex-wrap gap-2 mb-3">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) handleUpload(f);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => fileRef.current?.click()}
+                  disabled={uploading}
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  {uploading ? "Subiendo…" : "Subir imagen"}
+                </button>
+                <input
+                  value={urlInput}
+                  onChange={(e) => setUrlInput(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      addUrl();
+                    }
+                  }}
+                  placeholder="…o pega una URL https de imagen"
+                  className="flex-1 min-w-[180px] rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-900"
+                />
+                <button
+                  type="button"
+                  onClick={addUrl}
+                  className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700 hover:bg-gray-50"
+                >
+                  Añadir
+                </button>
+              </div>
+
+              {/* Pending */}
+              {pendingUrls.length > 0 && (
+                <div className="mb-3">
+                  <div className="flex flex-wrap gap-1.5 mb-2">
+                    {pendingUrls.map((u) => (
+                      <span
+                        key={u}
+                        className="inline-flex items-center gap-1 rounded bg-gray-100 px-2 py-1 text-[11px] text-gray-600 max-w-[200px]"
+                      >
+                        <span className="truncate">{u.split("/").pop()}</span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPendingUrls((p) => p.filter((x) => x !== u))
+                          }
+                          className="text-gray-400 hover:text-red-600"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleVerify}
+                    disabled={verifying}
+                    className="rounded-lg px-3.5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                    style={{ background: "var(--brand, #dc2626)" }}
+                  >
+                    {verifying
+                      ? "Verificando…"
+                      : `Verificar ${pendingUrls.length} imagen(es)`}
+                  </button>
+                </div>
+              )}
+
+              {/* Verified grid */}
+              {verified.length > 0 && (
                 <div className="grid grid-cols-3 gap-2">
-                  {candidates.map((c) => {
+                  {verified.map((c) => {
                     const on = selected.includes(c.url);
                     const badge = riskBadge[c.legalRiskLevel] ?? riskBadge.bajo;
                     return (
@@ -328,39 +470,36 @@ export default function AssistantChat() {
                             ✓
                           </span>
                         )}
-                        <span className="block text-[10px] text-gray-500 px-1 py-0.5">
-                          Coincidencia: {c.confidence}
+                        <span
+                          className={`block text-[10px] px-1 py-0.5 ${
+                            c.matchesModel ? "text-gray-500" : "text-red-600 font-semibold"
+                          }`}
+                        >
+                          {c.matchesModel
+                            ? `Coincide · ${c.confidence}`
+                            : "No coincide con el modelo"}
                         </span>
                       </button>
                     );
                   })}
                 </div>
               )}
+              <p className="text-[11px] text-gray-400 mt-1">
+                {selected.length} imagen(es) seleccionada(s) para el producto.
+              </p>
             </div>
 
             {/* Editable fields */}
             <div className="space-y-3">
               <Field label="Nombre">
-                <input
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className={inputCls}
-                />
+                <input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} />
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Marca">
-                  <input
-                    value={brand}
-                    onChange={(e) => setBrand(e.target.value)}
-                    className={inputCls}
-                  />
+                  <input value={brand} onChange={(e) => setBrand(e.target.value)} className={inputCls} />
                 </Field>
                 <Field label="Categoría">
-                  <input
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className={inputCls}
-                  />
+                  <input value={category} onChange={(e) => setCategory(e.target.value)} className={inputCls} />
                 </Field>
               </div>
               <Field label="Descripción">
@@ -406,9 +545,7 @@ export default function AssistantChat() {
                 Destacado
               </label>
               {result.query && result.query.costEuros > 0 && (
-                <p className="text-xs text-gray-400">
-                  Coste indicado: {result.query.costEuros} €
-                </p>
+                <p className="text-xs text-gray-400">Coste indicado: {result.query.costEuros} €</p>
               )}
             </div>
 
@@ -445,18 +582,10 @@ export default function AssistantChat() {
 const inputCls =
   "w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-gray-900 focus:ring-1 focus:ring-gray-900";
 
-function Field({
-  label,
-  children,
-}: {
-  label: string;
-  children: React.ReactNode;
-}) {
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <label className="block">
-      <span className="block text-xs font-semibold text-gray-500 mb-1">
-        {label}
-      </span>
+      <span className="block text-xs font-semibold text-gray-500 mb-1">{label}</span>
       {children}
     </label>
   );

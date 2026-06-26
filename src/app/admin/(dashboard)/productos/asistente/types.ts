@@ -1,8 +1,17 @@
 // Shared serializable types between the assistant Server Actions and the
 // client chat component.
 
+export interface AssistantQuery {
+  brand: string;
+  model: string;
+  reference: string;
+  costEuros: number;
+}
+
 export interface AssistantCandidate {
   url: string; // Vercel Blob URL (re-hosted)
+  matchesModel: boolean;
+  isWatch: boolean;
   confidence: "alta" | "media" | "baja";
   legalRiskLevel: "ninguno" | "bajo" | "alto";
   legalReasons: string[];
@@ -23,9 +32,15 @@ export interface AssistantMarket {
 export interface PrepareResult {
   ok: boolean;
   error?: string;
-  query?: { brand: string; model: string; reference: string; costEuros: number };
+  query?: AssistantQuery;
   listing?: { name: string; category: string; description: string };
   market?: AssistantMarket;
+  warnings?: string[];
+}
+
+export interface VerifyResult {
+  ok: boolean;
+  error?: string;
   candidates?: AssistantCandidate[];
   warnings?: string[];
 }

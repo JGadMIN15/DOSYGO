@@ -1,6 +1,6 @@
-// Google Programmable Search (Custom Search JSON API) image search + safe
-// server-side download. Needs GOOGLE_CSE_KEY and GOOGLE_CSE_CX (a Programmable
-// Search Engine id with "Image search" enabled).
+// Safe server-side image download. Used to fetch admin-provided image URLs
+// (pasted or uploaded) so they can be verified with vision and re-hosted to
+// Vercel Blob. https only; content-type and size are enforced.
 
 import type { SupportedMediaType } from "@/lib/ai";
 
@@ -36,34 +36,12 @@ async function withTimeout(url: string, ms: number): Promise<Response> {
   }
 }
 
-/** Returns up to `count` candidate image URLs for the query. */
-export async function searchImages(query: string, count = 6): Promise<string[]> {
-  const key = process.env.GOOGLE_CSE_KEY;
-  const cx = process.env.GOOGLE_CSE_CX;
-  if (!key || !cx) {
-    throw new Error(
-      "Búsqueda de imágenes no configurada (faltan GOOGLE_CSE_KEY / GOOGLE_CSE_CX)."
-    );
+export function isBlobUrl(url: string): boolean {
+  try {
+    return new URL(url).hostname.endsWith(".public.blob.vercel-storage.com");
+  } catch {
+    return false;
   }
-  const url = new URL("https://www.googleapis.com/customsearch/v1");
-  url.searchParams.set("key", key);
-  url.searchParams.set("cx", cx);
-  url.searchParams.set("q", query);
-  url.searchParams.set("searchType", "image");
-  url.searchParams.set("imgType", "photo");
-  url.searchParams.set("safe", "active");
-  url.searchParams.set("num", String(Math.min(10, Math.max(1, count))));
-
-  const res = await withTimeout(url.toString(), 10_000);
-  if (!res.ok) {
-    throw new Error(`Búsqueda de imágenes falló (HTTP ${res.status}).`);
-  }
-  const json = (await res.json()) as { items?: { link?: unknown }[] };
-  const items = Array.isArray(json.items) ? json.items : [];
-  return items
-    .map((i) => (typeof i.link === "string" ? i.link : ""))
-    .filter((l) => l.startsWith("https://"))
-    .slice(0, count);
 }
 
 /**

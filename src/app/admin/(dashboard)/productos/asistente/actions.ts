@@ -9,8 +9,8 @@ import { getClientIp } from "@/lib/client-ip";
 import { createProductRecord, type ProductData } from "@/lib/products";
 import { uploadProductImage } from "@/lib/blob";
 import {
-  searchImages,
   downloadImage,
+  isBlobUrl,
   type DownloadedImage,
 } from "@/lib/image-search";
 import {
@@ -18,18 +18,20 @@ import {
   researchMarket,
   assessWatchImages,
   generateListing,
+  type ParsedQuery,
   type ImageAssessment,
 } from "@/lib/ai";
 import type {
   AssistantCandidate,
+  AssistantQuery,
   CreateInput,
   CreateResult,
   PrepareResult,
+  VerifyResult,
 } from "./types";
 
 const MAX = { name: 200, brand: 100, category: 100, description: 5000 } as const;
-const MAX_CANDIDATES = 5;
-const SEARCH_COUNT = 6;
+const MAX_IMAGES = 8;
 
 async function clientIp(): Promise<string> {
   return getClientIp(await headers());
@@ -58,12 +60,20 @@ function isHttpsUrl(value: string): boolean {
   }
 }
 
-// --- Step 1: research + verify + draft -------------------------------------
+function sanitizeQuery(q: AssistantQuery): ParsedQuery {
+  return {
+    brand: String(q.brand ?? "").slice(0, MAX.brand),
+    model: String(q.model ?? "").slice(0, 200),
+    reference: String(q.reference ?? "").slice(0, 100),
+    costEuros: Number.isFinite(q.costEuros) ? Number(q.costEuros) : 0,
+  };
+}
+
+// --- Step 1: research + draft (no images) ----------------------------------
 
 export async function assistantPrepare(text: string): Promise<PrepareResult> {
   const session = await requireAdmin();
 
-  // The assistant spends money (Claude + Google + Blob): throttle per admin.
   if (!rateLimit(`ai-assistant:${session.sub}`, 15, 10 * 60_000).allowed) {
     return { ok: false, error: "Has hecho muchas consultas. Espera unos minutos." };
   }
@@ -76,29 +86,21 @@ export async function assistantPrepare(text: string): Promise<PrepareResult> {
     };
   }
 
-  // Parsing the model is essential — surfaces missing ANTHROPIC_API_KEY clearly.
-  let query;
+  let query: ParsedQuery;
   try {
     query = await parseProductQuery(input);
   } catch (err) {
     return {
       ok: false,
-      error:
-        err instanceof Error
-          ? err.message
-          : "No se pudo procesar la solicitud.",
+      error: err instanceof Error ? err.message : "No se pudo procesar la solicitud.",
     };
   }
   if (!query.brand && !query.model) {
-    return {
-      ok: false,
-      error: "No identifiqué el reloj. Indica la marca y el modelo.",
-    };
+    return { ok: false, error: "No identifiqué el reloj. Indica la marca y el modelo." };
   }
 
   const warnings: string[] = [];
 
-  // Style context for the description, pulled from the live catalog.
   const [sample, catRows] = await Promise.all([
     prisma.product.findMany({
       where: { archived: false },
@@ -113,26 +115,15 @@ export async function assistantPrepare(text: string): Promise<PrepareResult> {
       take: 20,
     }),
   ]);
-  const examples = sample.map((p) => p.description);
-  const categories = catRows.map((c) => c.category);
 
-  const searchQuery = `${query.brand} ${query.model} ${query.reference} reloj`
-    .replace(/\s+/g, " ")
-    .trim();
-
-  // Run independent work concurrently.
-  const [urlsResult, market, listingResult] = await Promise.allSettled([
-    searchImages(searchQuery, SEARCH_COUNT),
+  const [market, listingResult] = await Promise.allSettled([
     researchMarket(query),
-    generateListing(query, examples, categories),
+    generateListing(
+      query,
+      sample.map((p) => p.description),
+      catRows.map((c) => c.category)
+    ),
   ]);
-
-  if (urlsResult.status === "rejected") {
-    warnings.push(
-      "No se pudieron buscar imágenes automáticamente; añádelas manualmente."
-    );
-  }
-  const urls = urlsResult.status === "fulfilled" ? urlsResult.value : [];
 
   let listing: PrepareResult["listing"];
   if (listingResult.status === "fulfilled") {
@@ -149,67 +140,95 @@ export async function assistantPrepare(text: string): Promise<PrepareResult> {
   const marketValue =
     market.status === "fulfilled" && market.value ? market.value : undefined;
   if (!marketValue) {
-    warnings.push(
-      "No se pudo estimar el precio de mercado; revísalo manualmente."
-    );
+    warnings.push("No se pudo estimar el precio de mercado; revísalo manualmente.");
   }
 
-  // Download candidate images, verify with vision, re-host the good ones.
-  const candidates: AssistantCandidate[] = [];
-  if (urls.length > 0) {
-    const downloaded = (
-      await Promise.all(urls.map((u) => downloadImage(u)))
-    ).filter((d): d is DownloadedImage => d !== null);
-
-    if (downloaded.length > 0) {
-      let assessments: ImageAssessment[];
-      try {
-        assessments = await assessWatchImages(
-          downloaded.map((d) => ({ mediaType: d.mediaType, data: d.data })),
-          query
-        );
-      } catch {
-        assessments = [];
-        warnings.push("No se pudo verificar las imágenes con la IA.");
-      }
-
-      for (const a of assessments) {
-        if (candidates.length >= MAX_CANDIDATES) break;
-        const img = downloaded[a.index];
-        if (!img || !a.isWatch || !a.matchesModel) continue;
-        try {
-          const url = await uploadProductImage(img.bytes, img.mediaType, img.ext);
-          candidates.push({
-            url,
-            confidence: a.confidence,
-            legalRiskLevel: a.legalRiskLevel,
-            legalReasons: a.legalReasons ?? [],
-            note: a.note ?? "",
-            recommended: a.legalRiskLevel !== "alto" && a.confidence !== "baja",
-          });
-        } catch (err) {
-          console.error("Blob upload failed for candidate:", err);
-        }
-      }
-    }
-    if (candidates.length === 0) {
-      warnings.push(
-        "Ninguna imagen encontrada se verificó con seguridad; añade imágenes manualmente."
-      );
-    }
-  }
-
-  return {
-    ok: true,
-    query,
-    listing,
-    market: marketValue,
-    candidates,
-    warnings,
-  };
+  return { ok: true, query, listing, market: marketValue, warnings };
 }
 
-// --- Step 2: publish --------------------------------------------------------
+// --- Step 2: verify admin-provided images + re-host to Blob ----------------
+
+export async function assistantVerifyImages(
+  urls: string[],
+  q: AssistantQuery
+): Promise<VerifyResult> {
+  const session = await requireAdmin();
+
+  if (!rateLimit(`ai-verify:${session.sub}`, 20, 10 * 60_000).allowed) {
+    return { ok: false, error: "Has verificado muchas veces. Espera unos minutos." };
+  }
+
+  const clean = Array.from(
+    new Set((Array.isArray(urls) ? urls : []).map((u) => String(u)).filter(isHttpsUrl))
+  ).slice(0, MAX_IMAGES);
+  if (clean.length === 0) {
+    return { ok: false, error: "Añade al menos una imagen (URL https o súbela)." };
+  }
+
+  const query = sanitizeQuery(q);
+  const warnings: string[] = [];
+
+  const downloaded = (await Promise.all(clean.map((u) => downloadImage(u)))).filter(
+    (d): d is DownloadedImage => d !== null
+  );
+  const failed = clean.length - downloaded.length;
+  if (failed > 0) {
+    warnings.push(
+      `${failed} imagen(es) no se pudieron descargar (usa jpg/png/webp/gif, máx 8 MB).`
+    );
+  }
+  if (downloaded.length === 0) {
+    return { ok: false, error: "No se pudo descargar ninguna imagen válida.", warnings };
+  }
+
+  let assessments: ImageAssessment[];
+  try {
+    assessments = await assessWatchImages(
+      downloaded.map((d) => ({ mediaType: d.mediaType, data: d.data })),
+      query
+    );
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "No se pudo verificar las imágenes.",
+      warnings,
+    };
+  }
+
+  const candidates: AssistantCandidate[] = [];
+  for (const a of assessments) {
+    const img = downloaded[a.index];
+    if (!img) continue;
+    let url: string;
+    try {
+      url = isBlobUrl(img.sourceUrl)
+        ? img.sourceUrl
+        : await uploadProductImage(img.bytes, img.mediaType, img.ext);
+    } catch (err) {
+      console.error("Blob upload failed:", err);
+      warnings.push("No se pudo guardar una imagen en el almacenamiento.");
+      continue;
+    }
+    candidates.push({
+      url,
+      matchesModel: Boolean(a.matchesModel),
+      isWatch: Boolean(a.isWatch),
+      confidence: a.confidence,
+      legalRiskLevel: a.legalRiskLevel,
+      legalReasons: a.legalReasons ?? [],
+      note: a.note ?? "",
+      recommended:
+        Boolean(a.matchesModel) &&
+        Boolean(a.isWatch) &&
+        a.legalRiskLevel !== "alto" &&
+        a.confidence !== "baja",
+    });
+  }
+
+  return { ok: true, candidates, warnings };
+}
+
+// --- Step 3: publish --------------------------------------------------------
 
 export async function assistantCreate(input: CreateInput): Promise<CreateResult> {
   const session = await requireAdmin();
