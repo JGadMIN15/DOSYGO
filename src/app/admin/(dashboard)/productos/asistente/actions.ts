@@ -74,6 +74,12 @@ function isLuxuryBrand(brand: string): boolean {
   return LUXURY_BRANDS.some((x) => b.includes(x));
 }
 
+// Server-side, model-independent high-risk check (used to re-enforce the gate
+// at publish time). A luxury brand at an implausibly low cost = likely replica.
+function deterministicCounterfeitAlto(brand: string, costEuros: number): boolean {
+  return Number.isFinite(costEuros) && costEuros > 0 && costEuros < 800 && isLuxuryBrand(brand);
+}
+
 // Combine the model's authenticity judgement with deterministic safety checks
 // (cost far below genuine floor, luxury brand at an implausible cost).
 function assessCounterfeit(
@@ -254,10 +260,14 @@ export async function assistantVerifyImages(
     };
   }
 
+  // Bind each verdict to the image at THAT position — never trust the model's
+  // `index` to look up a URL (a manipulated index could attach a "clean"
+  // verdict to a different, risky image).
   const candidates: AssistantCandidate[] = [];
-  for (const a of assessments) {
-    const img = downloaded[a.index];
-    if (!img) continue;
+  for (let i = 0; i < downloaded.length; i++) {
+    const a = assessments.find((x) => x.index === i);
+    if (!a || !a.isWatch || !a.matchesModel) continue;
+    const img = downloaded[i];
     let url: string;
     try {
       url = isBlobUrl(img.sourceUrl)
@@ -313,11 +323,29 @@ export async function assistantCreate(input: CreateInput): Promise<CreateResult>
   if (!Number.isInteger(stock) || stock < 0 || stock > 1_000_000)
     return { ok: false, error: "El stock no es válido." };
 
+  // Assistant images are always re-hosted to our own Blob store during
+  // verification; only accept those (no arbitrary external hotlinks).
   const images = Array.isArray(input.images)
-    ? input.images.map((u) => String(u)).filter(isHttpsUrl)
+    ? input.images.map((u) => String(u)).filter(isBlobUrl)
     : [];
-  if (images.length === 0) return { ok: false, error: "Añade al menos una imagen." };
+  if (images.length === 0)
+    return { ok: false, error: "Añade y verifica al menos una imagen." };
   if (images.length > 10) return { ok: false, error: "Máximo 10 imágenes." };
+
+  // Re-enforce the authenticity gate on the server: the client-side warning and
+  // checkbox can be bypassed by calling this Server Action directly. The
+  // luxury-brand-at-implausible-cost check is independent of any model output.
+  const flaggedCounterfeit = deterministicCounterfeitAlto(
+    brand,
+    Number(input.costEuros)
+  );
+  if (flaggedCounterfeit && !input.acknowledgedRisk) {
+    return {
+      ok: false,
+      error:
+        "Marcado como posible falsificación (marca de lujo a precio irrisorio). Confirma que es auténtico y legal para poder publicar.",
+    };
+  }
 
   let availableUntil: Date | null = null;
   const rawDate = String(input.availableUntil ?? "").trim();
@@ -343,10 +371,12 @@ export async function assistantCreate(input: CreateInput): Promise<CreateResult>
   const product = await createProductRecord(data);
   await logAudit({
     adminEmail: session.email,
-    action: "product_create_ai",
+    action: flaggedCounterfeit ? "product_create_ai_override" : "product_create_ai",
     targetType: "product",
     targetId: product.id,
-    detail: product.name,
+    detail: flaggedCounterfeit
+      ? `${product.name} (publicado pese a aviso de autenticidad)`
+      : product.name,
     ip: await clientIp(),
   });
   revalidatePath("/productos");

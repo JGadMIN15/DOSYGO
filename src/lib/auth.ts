@@ -50,9 +50,17 @@ export function hashToken(raw: string): string {
 }
 
 // Generic HMAC-signed value for short-lived stateless tokens (e.g. email OTP).
+// A domain-separation label ("otp:") is mixed into the MAC so a value signed
+// here can never validate as an admin session token (signSession), and vice
+// versa, even if the payload shapes ever overlapped.
+const VALUE_DOMAIN = "otp:";
+
 export function signValue(value: unknown): string {
   const body = Buffer.from(JSON.stringify(value)).toString("base64url");
-  const sig = createHmac("sha256", getSecret()).update(body).digest("base64url");
+  const sig = createHmac("sha256", getSecret())
+    .update(VALUE_DOMAIN)
+    .update(body)
+    .digest("base64url");
   return `${body}.${sig}`;
 }
 
@@ -64,7 +72,10 @@ export function verifyValue<T>(token: string | undefined | null): T | null {
   if (dot <= 0) return null;
   const body = token.slice(0, dot);
   const sig = token.slice(dot + 1);
-  const expected = createHmac("sha256", secret).update(body).digest("base64url");
+  const expected = createHmac("sha256", secret)
+    .update(VALUE_DOMAIN)
+    .update(body)
+    .digest("base64url");
   const a = Buffer.from(sig);
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;

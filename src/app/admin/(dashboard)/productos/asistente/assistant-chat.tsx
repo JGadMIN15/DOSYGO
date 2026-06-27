@@ -217,6 +217,8 @@ export default function AssistantChat() {
         featured,
         availableUntil,
         images: selected,
+        costEuros: result?.query?.costEuros ?? 0,
+        acknowledgedRisk: acceptedRisk,
       });
       if (!res.ok) {
         setError(res.error ?? "No se pudo publicar.");

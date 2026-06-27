@@ -5,6 +5,9 @@ import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import Stripe from "stripe";
 
+const CUID_RE = /^c[a-z0-9]{24,}$/i;
+const MAX_ITEM_PRICE = 2_000_000; // 20.000 € in céntimos — sane per-item ceiling
+
 // Crypto-secure tracking code: the code acts as a bearer token granting access
 // to order PII via /api/tracking, so it must not be predictable. randomInt()
 // draws from crypto and avoids the modulo bias of Math.random()-based pickers.
@@ -49,6 +52,13 @@ export async function POST(req: NextRequest) {
   }
 
   const session = event.data.object as Stripe.Checkout.Session;
+
+  // Fulfil only when the money has actually been captured. `checkout.session.
+  // completed` also fires for async/delayed methods while still unpaid; never
+  // create a "paid" order, decrement stock, or ship on an unpaid session.
+  if (session.payment_status !== "paid") {
+    return NextResponse.json({ received: true, unpaid: true });
+  }
 
   // --- Idempotency: Stripe delivers webhooks at-least-once and retries on
   //     non-2xx, so the same session can arrive multiple times. Never create
@@ -126,11 +136,14 @@ export async function POST(req: NextRequest) {
   // or nested writes (both run inside a transaction, which it rejects).
   for (const item of itemsMeta) {
     if (
-      !item.id ||
+      typeof item.id !== "string" ||
+      !CUID_RE.test(item.id) ||
       !Number.isInteger(item.qty) ||
       item.qty <= 0 ||
+      item.qty > 99 ||
       !Number.isInteger(item.price) ||
-      item.price < 0
+      item.price < 0 ||
+      item.price > MAX_ITEM_PRICE
     ) {
       console.error("Skipping invalid order item in metadata:", trackingCode, item);
       continue;
@@ -179,7 +192,14 @@ export async function POST(req: NextRequest) {
   //     updateMany/transactions. Best-effort: a failure must not bounce the
   //     webhook (the paid order is the source of truth). ---
   for (const i of itemsMeta) {
-    if (!i.id || !Number.isInteger(i.qty) || i.qty <= 0) continue;
+    if (
+      typeof i.id !== "string" ||
+      !CUID_RE.test(i.id) ||
+      !Number.isInteger(i.qty) ||
+      i.qty <= 0 ||
+      i.qty > 99
+    )
+      continue;
     try {
       const rows = await prisma.$executeRaw`
         UPDATE "Product" SET stock = stock - ${i.qty}

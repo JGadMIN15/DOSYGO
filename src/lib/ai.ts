@@ -102,6 +102,8 @@ async function groqChat(
   });
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
+    // Log the upstream detail server-side only; never echo it to the client.
+    console.error("Groq error:", res.status, detail.slice(0, 300));
     if (res.status === 429) {
       throw new Error("Límite gratuito de Groq alcanzado; espera un momento.");
     }
@@ -110,7 +112,7 @@ async function groqChat(
         "El modelo de IA ya no está disponible en Groq; hay que actualizar el identificador del modelo."
       );
     }
-    throw new Error(`Error de la IA (HTTP ${res.status}). ${detail.slice(0, 160)}`);
+    throw new Error("El servicio de IA no está disponible ahora mismo.");
   }
   const data = (await res.json()) as GroqResponse;
   const text = data.choices?.[0]?.message?.content ?? "";

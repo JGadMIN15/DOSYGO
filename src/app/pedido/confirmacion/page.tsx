@@ -1,9 +1,11 @@
 import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { CheckCircle, Package, Truck, Home, ChevronRight, MapPin } from "lucide-react";
 import ClearCartOnLoad from "@/components/ClearCartOnLoad";
 import { formatPrice } from "@/lib/format";
+import { verifyValue } from "@/lib/auth";
 
 interface Props {
   searchParams: Promise<{ session_id?: string }>;
@@ -44,6 +46,49 @@ export default async function ConfirmationPage({ searchParams }: Props) {
   const customerName = session.customer_details?.name ?? "Cliente";
   const customerEmail = session.customer_details?.email ?? "";
   const total = session.amount_total ?? 0;
+
+  // PII (email, address, items, tracking code) is shown ONLY to the verified
+  // buyer. A `session_id` is a bearer value that leaks easily (browser history,
+  // server/proxy logs, Referer), so it must not alone unlock another customer's
+  // personal data.
+  const verifiedCookie = (await cookies()).get("dosygo_email_verified")?.value;
+  const vp = verifyValue<{ email: string; exp: number }>(verifiedCookie);
+  // eslint-disable-next-line react-hooks/purity -- request-time clock in a Server Component
+  const nowMs = Date.now();
+  const verifiedEmail =
+    vp && typeof vp.exp === "number" && vp.exp * 1000 > nowMs
+      ? String(vp.email).toLowerCase()
+      : null;
+  const isOwner =
+    !!verifiedEmail &&
+    [session.customer_details?.email, order?.customerEmail].some(
+      (e) => e && e.toLowerCase() === verifiedEmail
+    );
+
+  if (!isOwner) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-20 text-center">
+        <div
+          className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4"
+          style={{ background: "rgba(22,163,74,0.1)" }}
+        >
+          <CheckCircle className="w-10 h-10 text-green-600" />
+        </div>
+        <h1 className="text-3xl font-black text-gray-900 mb-2">¡Pedido confirmado!</h1>
+        <p className="text-gray-500">
+          Hemos recibido tu pedido. Te hemos enviado los detalles y el seguimiento
+          por email.
+        </p>
+        <Link
+          href="/"
+          className="mt-6 inline-block font-semibold"
+          style={{ color: "var(--brand)" }}
+        >
+          Ir al inicio
+        </Link>
+      </div>
+    );
+  }
 
   const trackingSteps = [
     { key: "confirmed",  label: "Pedido confirmado",   icon: CheckCircle, color: "text-green-600",  bg: "bg-green-100" },

@@ -57,6 +57,8 @@ export interface CreateInput {
   featured: boolean;
   availableUntil: string; // "YYYY-MM-DD" or ""
   images: string[];
+  costEuros: number; // for the server-side authenticity re-check
+  acknowledgedRisk: boolean; // user confirmed authentic/legal despite a warning
 }
 
 export interface CreateResult {
