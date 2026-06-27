@@ -20,6 +20,7 @@ import {
   generateListing,
   type ParsedQuery,
   type ImageAssessment,
+  type MarketResearch,
 } from "@/lib/ai";
 import type {
   AssistantCandidate,
@@ -58,6 +59,62 @@ function isHttpsUrl(value: string): boolean {
   } catch {
     return false;
   }
+}
+
+// Ultra-luxury brands whose genuine units never sell for a few hundred euros —
+// a low cost almost always means a replica (illegal to sell as the brand).
+const LUXURY_BRANDS = [
+  "rolex", "patek", "audemars", "vacheron", "richard mille", "a. lange",
+  "omega", "cartier", "breitling", "iwc", "jaeger", "panerai", "hublot",
+  "zenith", "breguet", "tudor", "tag heuer", "blancpain", "ulysse nardin",
+];
+
+function isLuxuryBrand(brand: string): boolean {
+  const b = brand.toLowerCase();
+  return LUXURY_BRANDS.some((x) => b.includes(x));
+}
+
+// Combine the model's authenticity judgement with deterministic safety checks
+// (cost far below genuine floor, luxury brand at an implausible cost).
+function assessCounterfeit(
+  q: ParsedQuery,
+  market: MarketResearch | undefined
+): { level: "posible" | "alto"; message: string } | null {
+  const reasons: string[] = [];
+  let level: "posible" | "alto" | null = null;
+
+  if (market?.counterfeitRisk === "alto") {
+    level = "alto";
+    if (market.warning) reasons.push(market.warning);
+  } else if (market?.counterfeitRisk === "posible") {
+    level = "posible";
+    if (market.warning) reasons.push(market.warning);
+  }
+
+  const cost = q.costEuros;
+  if (cost > 0 && market) {
+    const floor =
+      market.genuineMinEuros > 0 ? market.genuineMinEuros : market.marketMinEuros;
+    if (floor > 0 && cost < floor * 0.35) {
+      level = "alto";
+      reasons.push(
+        `El coste indicado (${cost} €) es muy inferior al de un ejemplar auténtico (~${floor} € o más): posible réplica o precio incoherente.`
+      );
+    }
+  }
+
+  if (cost > 0 && cost < 800 && isLuxuryBrand(q.brand)) {
+    level = "alto";
+    reasons.push(
+      `${q.brand} es una marca de lujo; a ${cost} € casi con seguridad es una réplica. Vender falsificaciones de marca es ILEGAL.`
+    );
+  }
+
+  if (!level) return null;
+  const message = reasons.length
+    ? Array.from(new Set(reasons)).join(" ")
+    : "Revisa la autenticidad: el coste indicado parece incoherente con el precio de mercado.";
+  return { level, message };
 }
 
 function sanitizeQuery(q: AssistantQuery): ParsedQuery {
@@ -143,7 +200,9 @@ export async function assistantPrepare(text: string): Promise<PrepareResult> {
     warnings.push("No se pudo estimar el precio de mercado; revísalo manualmente.");
   }
 
-  return { ok: true, query, listing, market: marketValue, warnings };
+  const counterfeit = assessCounterfeit(query, marketValue) ?? undefined;
+
+  return { ok: true, query, listing, market: marketValue, counterfeit, warnings };
 }
 
 // --- Step 2: verify admin-provided images + re-host to Blob ----------------

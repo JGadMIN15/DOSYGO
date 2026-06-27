@@ -55,6 +55,7 @@ export default function AssistantChat() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [createdId, setCreatedId] = useState<string | null>(null);
+  const [acceptedRisk, setAcceptedRisk] = useState(false);
 
   function say(role: Bubble["role"], text: string) {
     setMessages((m) => [...m, { role, text }]);
@@ -85,6 +86,7 @@ export default function AssistantChat() {
     }
 
     setResult(res);
+    setAcceptedRisk(false);
     if (res.listing) {
       setName(res.listing.name);
       setCategory(res.listing.category);
@@ -105,13 +107,16 @@ export default function AssistantChat() {
     );
     if (res.market) {
       parts.push(
-        `Precio de venta recomendado (estimación aproximada): ${res.market.recommendedPriceEuros} € ` +
+        `Precio de venta recomendado (${res.market.grounded ? "basado en listados online" : "estimación aproximada"}): ${res.market.recommendedPriceEuros} € ` +
           `(rango ~${res.market.marketMinEuros}–${res.market.marketMaxEuros} €). ` +
           `Demanda ${res.market.demand}; tiempo estimado de venta (orientativo): ${res.market.estimatedTimeToSell}.`
       );
     }
     parts.push("Ahora añade las imágenes (súbelas o pega su URL) y pulsa «Verificar imágenes». Luego revisa los datos y publica.");
     say("assistant", parts.join(" "));
+    if (res.counterfeit) {
+      say("assistant", "🚨 AVISO DE AUTENTICIDAD: " + res.counterfeit.message);
+    }
     (res.warnings ?? []).forEach((w) => say("assistant", "Aviso: " + w));
     setPhase("review");
   }
@@ -194,6 +199,12 @@ export default function AssistantChat() {
       setError("Selecciona al menos una imagen verificada.");
       return;
     }
+    if (result?.counterfeit && !acceptedRisk) {
+      setError(
+        "Marca la casilla confirmando que el artículo es auténtico y legal para poder publicar."
+      );
+      return;
+    }
     setPhase("publishing");
     try {
       const res = await assistantCreate({
@@ -237,6 +248,7 @@ export default function AssistantChat() {
     setVerified([]);
     setSelected([]);
     setCreatedId(null);
+    setAcceptedRisk(false);
     setMessages([{ role: "assistant", text: INTRO }]);
     setPhase("input");
   }
@@ -329,14 +341,63 @@ export default function AssistantChat() {
           </div>
         ) : (
           <div className="space-y-5">
+            {/* Authenticity / counterfeit warning */}
+            {result.counterfeit && (
+              <div
+                className={`rounded-lg border-2 p-4 ${
+                  result.counterfeit.level === "alto"
+                    ? "border-red-300 bg-red-50"
+                    : "border-amber-300 bg-amber-50"
+                }`}
+              >
+                <p
+                  className={`font-bold mb-1 ${
+                    result.counterfeit.level === "alto" ? "text-red-700" : "text-amber-800"
+                  }`}
+                >
+                  🚨 Posible falsificación o precio incoherente
+                </p>
+                <p
+                  className={`text-sm ${
+                    result.counterfeit.level === "alto" ? "text-red-700" : "text-amber-800"
+                  }`}
+                >
+                  {result.counterfeit.message}
+                </p>
+                <label className="flex items-start gap-2 mt-3 text-sm font-medium text-gray-800">
+                  <input
+                    type="checkbox"
+                    checked={acceptedRisk}
+                    onChange={(e) => setAcceptedRisk(e.target.checked)}
+                    className="mt-0.5"
+                  />
+                  <span>
+                    Confirmo que este artículo es <strong>auténtico</strong> y que su
+                    venta es <strong>legal</strong>.
+                  </span>
+                </label>
+              </div>
+            )}
+
             {/* Market */}
             {market && (
               <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm">
                 <p className="font-semibold text-gray-900 mb-1">
-                  Estimación de precio <span className="font-normal text-gray-400">(aproximada, sin búsqueda en vivo)</span>
+                  {market.grounded ? (
+                    <>
+                      Precio de mercado{" "}
+                      <span className="font-normal text-green-600">(basado en listados online)</span>
+                    </>
+                  ) : (
+                    <>
+                      Estimación de precio{" "}
+                      <span className="font-normal text-gray-400">(aproximada, sin búsqueda en vivo)</span>
+                    </>
+                  )}
                 </p>
                 <p className="text-gray-700">
-                  Recomendado: <strong>{market.recommendedPriceEuros} €</strong> · Rango estimado ~
+                  Recomendado: <strong>{market.recommendedPriceEuros} €</strong> ·{" "}
+                  {market.grounded ? "Rango" : "Rango estimado"} ~
                   {market.marketMinEuros}–{market.marketMaxEuros} €
                 </p>
                 <p className="text-gray-700">
@@ -560,7 +621,10 @@ export default function AssistantChat() {
             <div className="flex gap-2">
               <button
                 onClick={handlePublish}
-                disabled={phase === "publishing"}
+                disabled={
+                  phase === "publishing" ||
+                  (!!result.counterfeit && !acceptedRisk)
+                }
                 className="flex-1 rounded-lg px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-50"
                 style={{ background: "var(--brand, #dc2626)" }}
               >

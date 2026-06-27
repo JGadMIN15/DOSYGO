@@ -12,6 +12,8 @@
 // Everything here runs server-side. Needs GROQ_API_KEY. If Groq deprecates the
 // model id below, update MODEL (see https://console.groq.com/docs/models).
 
+import { searchWeb } from "@/lib/web-search";
+
 const MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 const ENDPOINT = "https://api.groq.com/openai/v1/chat/completions";
 const MAX_VISION_IMAGES = 5;
@@ -33,10 +35,14 @@ export interface MarketResearch {
   recommendedPriceEuros: number;
   marketMinEuros: number;
   marketMaxEuros: number;
+  genuineMinEuros: number; // approx. floor price of a GENUINE unit
   demand: "alta" | "media" | "baja";
   estimatedTimeToSell: string;
+  counterfeitRisk: "ninguno" | "posible" | "alto";
+  warning: string; // Spanish authenticity/price warning, "" if none
   rationale: string;
   sources: string[];
+  grounded: boolean; // true = based on real web listings, false = model estimate
 }
 
 export interface ImageAssessment {
@@ -156,37 +162,70 @@ export async function parseProductQuery(text: string): Promise<ParsedQuery> {
 
 export async function researchMarket(q: ParsedQuery): Promise<MarketResearch | null> {
   try {
+    // Pull real listings from the web when SERPER_API_KEY is set (free, no card).
+    const results = await searchWeb(
+      `${q.brand} ${q.model} ${q.reference} precio comprar`.replace(/\s+/g, " ").trim()
+    );
+    const grounded = results.length > 0;
+    const domains = Array.from(
+      new Set(results.map((r) => r.domain).filter(Boolean))
+    ).slice(0, 6);
+    const context = results
+      .slice(0, 8)
+      .map((r) => `- ${r.title} — ${r.snippet} [${r.domain}]`)
+      .join("\n");
+
+    const userContent = grounded
+      ? `Reloj: ${q.brand} ${q.model} ${q.reference}`.trim() +
+        `. Coste de adquisición: ${q.costEuros} €.\n\n` +
+        "RESULTADOS DE BÚSQUEDA WEB (precios reales de tiendas/marketplaces; básate en ELLOS para el precio, no inventes):\n" +
+        context +
+        "\n\nA partir de esos listados reales: indica el rango de mercado y recomienda un precio de venta competitivo " +
+        "(por encima del coste, con margen razonable). Estima la demanda y cuánto suele tardar en venderse. " +
+        "Valora la autenticidad: ¿es coherente ese coste con los precios reales? En 'rationale' resume en qué listados te basas."
+      : `Reloj: ${q.brand} ${q.model} ${q.reference}`.trim() +
+        `. Coste de adquisición: ${q.costEuros} €. ` +
+        "Estima su precio de venta habitual en España/UE y recomienda un precio de venta competitivo " +
+        "(por encima del coste, con margen razonable). Estima la demanda y cuánto suele tardar en venderse un modelo así. " +
+        "Es una ESTIMACIÓN aproximada basada en tu conocimiento (sin búsqueda en vivo); indícalo en 'rationale'. " +
+        "Y valora la autenticidad: ¿es coherente ese coste para una pieza genuina?";
+
     const raw = await groqChat(
       [
         {
           role: "system",
           content:
             "Eres analista de una tienda de relojes en España. No inventes cifras: si no tienes datos suficientes, sé conservador y dilo en 'rationale'. " +
+            "Evalúa TAMBIÉN si el COSTE indicado es plausible para una unidad AUTÉNTICA. Si el coste es muy inferior a lo que cuesta un ejemplar genuino " +
+            "(típico de réplicas de marcas de lujo como Rolex, Omega, Cartier, Patek Philippe, Audemars Piguet, Breitling, IWC, Tudor…), pon counterfeitRisk 'alto' " +
+            "y explica en 'warning' (en español) que casi con seguridad es una falsificación y que vender réplicas de marca es ILEGAL. Si hay dudas, 'posible'. Si es plausible, 'ninguno' y warning ''. " +
+            "'genuineMinEuros' = precio mínimo aproximado en euros de una unidad AUTÉNTICA de ese modelo. " +
             'Responde ÚNICAMENTE con un objeto JSON, sin texto ni markdown, con esta forma exacta: ' +
-            '{"recommendedPriceEuros": number, "marketMinEuros": number, "marketMaxEuros": number, ' +
-            '"demand": "alta"|"media"|"baja", "estimatedTimeToSell": string, "rationale": string, "sources": []}',
+            '{"recommendedPriceEuros": number, "marketMinEuros": number, "marketMaxEuros": number, "genuineMinEuros": number, ' +
+            '"demand": "alta"|"media"|"baja", "estimatedTimeToSell": string, ' +
+            '"counterfeitRisk": "ninguno"|"posible"|"alto", "warning": string, "rationale": string}',
         },
-        {
-          role: "user",
-          content:
-            `Reloj: ${q.brand} ${q.model} ${q.reference}`.trim() +
-            `. Coste de adquisición: ${q.costEuros} €. ` +
-            "Estima su precio de venta habitual en España/UE y recomienda un precio de venta competitivo " +
-            "(por encima del coste, con margen razonable). Estima la demanda y cuánto suele tardar en venderse un modelo así. " +
-            "Es una ESTIMACIÓN aproximada basada en tu conocimiento (sin búsqueda en vivo); indícalo en 'rationale'.",
-        },
+        { role: "user", content: userContent },
       ],
-      { temperature: 0.3, maxTokens: 700 }
+      { temperature: 0.2, maxTokens: 900 }
     );
     const out = parseJsonLoose<Partial<MarketResearch>>(raw);
     return {
       recommendedPriceEuros: Math.round(num(out.recommendedPriceEuros)),
       marketMinEuros: Math.round(num(out.marketMinEuros)),
       marketMaxEuros: Math.round(num(out.marketMaxEuros)),
+      genuineMinEuros: Math.round(num(out.genuineMinEuros)),
       demand: oneOf(out.demand, ["alta", "media", "baja"] as const, "media"),
       estimatedTimeToSell: str(out.estimatedTimeToSell).slice(0, 120),
+      counterfeitRisk: oneOf(
+        out.counterfeitRisk,
+        ["ninguno", "posible", "alto"] as const,
+        "ninguno"
+      ),
+      warning: str(out.warning).slice(0, 400),
       rationale: str(out.rationale).slice(0, 800),
-      sources: [],
+      sources: grounded ? domains : [],
+      grounded,
     };
   } catch (err) {
     console.error("researchMarket failed:", err);

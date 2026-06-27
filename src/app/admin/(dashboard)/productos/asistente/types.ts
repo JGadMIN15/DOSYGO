@@ -27,6 +27,7 @@ export interface AssistantMarket {
   estimatedTimeToSell: string;
   rationale: string;
   sources: string[];
+  grounded: boolean;
 }
 
 export interface PrepareResult {
@@ -35,6 +36,7 @@ export interface PrepareResult {
   query?: AssistantQuery;
   listing?: { name: string; category: string; description: string };
   market?: AssistantMarket;
+  counterfeit?: { level: "posible" | "alto"; message: string };
   warnings?: string[];
 }
 
