@@ -77,6 +77,14 @@ export default function Header() {
               Relojes
             </Link>
 
+            {/* Catálogo (reserva) — desktop */}
+            <Link
+              href="/catalogo"
+              className="hidden md:inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-red-600 transition-colors rounded-lg hover:bg-gray-50"
+            >
+              Catálogo
+            </Link>
+
             {/* Cart */}
             <Link
               href="/carrito"
@@ -133,6 +141,14 @@ export default function Header() {
               onClick={() => setMenuOpen(false)}
             >
               Todos los relojes
+            </Link>
+
+            <Link
+              href="/catalogo"
+              className="px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-gray-50 rounded-lg transition-colors"
+              onClick={() => setMenuOpen(false)}
+            >
+              Catálogo · Reservar
             </Link>
           </div>
         </div>

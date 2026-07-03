@@ -30,6 +30,7 @@ const nextConfig: NextConfig = {
   images: {
     localPatterns: [
       { pathname: "/productos/**" },
+      { pathname: "/catalogo-img/**" },
       { pathname: "/*.jpeg" },
       { pathname: "/*.png" },
     ],

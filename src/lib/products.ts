@@ -16,6 +16,7 @@ export interface ProductData {
   featured: boolean;
   images: string; // JSON array of URLs
   availableUntil: Date | null;
+  catalogSku?: string | null; // set when published from the reservation catalogue
 }
 
 // Mirror a product to Stripe and persist the returned ids. Non-fatal: a Stripe

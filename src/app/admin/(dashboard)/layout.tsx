@@ -27,6 +27,12 @@ export default async function AdminDashboardLayout({
               <Link href="/admin/pedidos" className="text-gray-600 hover:text-gray-900">
                 Pedidos
               </Link>
+              <Link href="/admin/catalogo" className="text-gray-600 hover:text-gray-900">
+                Catálogo
+              </Link>
+              <Link href="/admin/reservas" className="text-gray-600 hover:text-gray-900">
+                Reservas
+              </Link>
               <Link href="/admin/vendidos" className="text-gray-600 hover:text-gray-900">
                 Vendidos
               </Link>
