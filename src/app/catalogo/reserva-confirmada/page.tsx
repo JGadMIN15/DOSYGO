@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { CheckCircle, ChevronRight, Clock, CreditCard, AlertTriangle } from "lucide-react";
 import { getStripe } from "@/lib/stripe";
 import { formatPrice } from "@/lib/format";
+import { ensureReservationForSession } from "@/lib/reservation-server";
+import ReservationTicketLink from "@/components/ReservationTicketLink";
 import { RESERVATION_DEPOSIT_CENTS, RESERVATION_REFUND_DAYS, RESERVATION_CLAIM_HOURS } from "@/lib/reservation";
 
 interface Props {
@@ -9,6 +12,16 @@ interface Props {
 }
 
 export const metadata = { title: "Reserva confirmada — Dos&Go" };
+
+async function absoluteBaseUrl(): Promise<string> {
+  const env = (process.env.NEXT_PUBLIC_APP_URL ?? "").replace(/[^\x20-\x7E]/g, "").trim();
+  if (env) return env.replace(/\/$/, "");
+  // Fallback: derive from the request headers (guest may be on any host).
+  const h = await headers();
+  const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
+  const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
+  return `${proto}://${host}`;
+}
 
 export default async function ReservaConfirmadaPage({ searchParams }: Props) {
   const { session_id } = await searchParams;
@@ -19,6 +32,7 @@ export default async function ReservaConfirmadaPage({ searchParams }: Props) {
   let modelo: string | null = null;
   let deposito = RESERVATION_DEPOSIT_CENTS;
   let pagado = false;
+  let ticket: string | null = null;
 
   if (session_id) {
     try {
@@ -27,11 +41,17 @@ export default async function ReservaConfirmadaPage({ searchParams }: Props) {
         modelo = [session.metadata.brand, session.metadata.sku].filter(Boolean).join(" ") || null;
         deposito = session.amount_total ?? deposito;
         pagado = session.payment_status === "paid";
+        // Create the reservation now if the webhook hasn't yet (idempotent), so
+        // the customer always gets their ticket link on this screen.
+        const reservation = await ensureReservationForSession(session);
+        ticket = reservation?.ticket ?? null;
       }
     } catch {
       // ignore — show the generic confirmation below
     }
   }
+
+  const ticketUrl = ticket ? `${await absoluteBaseUrl()}/reserva/${ticket}` : null;
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
@@ -81,6 +101,12 @@ export default async function ReservaConfirmadaPage({ searchParams }: Props) {
           </li>
         </ul>
       </div>
+
+      {ticketUrl && (
+        <div className="mb-6">
+          <ReservationTicketLink url={ticketUrl} />
+        </div>
+      )}
 
       <div className="flex flex-col sm:flex-row gap-4">
         <Link

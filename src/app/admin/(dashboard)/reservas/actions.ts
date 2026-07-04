@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/admin-session";
-import { getStripe } from "@/lib/stripe";
+import { refundReservationDeposit } from "@/lib/reservation-server";
 import { RESERVATION_STATUSES } from "@/lib/reservation";
 
 const CUID_RE = /^c[a-z0-9]{24,}$/i;
@@ -43,13 +43,8 @@ export async function updateReservationStatus(formData: FormData): Promise<void>
 
   // When marking a reservation as refunded, try to return the deposit through
   // Stripe (best-effort — the admin can still mark it if the refund is manual).
-  if (status === "refunded" && !reservation.depositRefunded && reservation.stripePaymentId) {
-    try {
-      await getStripe().refunds.create({ payment_intent: reservation.stripePaymentId });
-      depositRefunded = true;
-    } catch (err) {
-      console.error("Reservation refund failed:", err);
-    }
+  if (status === "refunded" && !reservation.depositRefunded) {
+    depositRefunded = await refundReservationDeposit(reservation);
   }
 
   await prisma.reservation.update({

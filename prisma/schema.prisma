@@ -105,6 +105,7 @@ model Reservation {
   customerEmail   String
   customerPhone   String?
   note            String?
+  ticket          String?  @unique // token secreto del cliente: acceso a su reserva sin registro (/reserva/<ticket>)
   depositCents    Int      @default(5000) // señal cobrada (céntimos)
   finalPriceCents Int? // precio final que le comunicamos al cliente (céntimos)
   pricedAt        DateTime? // momento en que fijamos el precio final: arranca la ventana de reclamación de 24h
