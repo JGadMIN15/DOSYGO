@@ -4,6 +4,7 @@
 // needs no DB seeding; only reservations are persisted.
 
 import catalogData from "@/data/catalog.json";
+import catalogImages from "@/data/catalog-images.json";
 
 export interface CatalogItem {
   brand: string;
@@ -62,11 +63,17 @@ export function filterCatalog(opts: {
   return { items: items.slice(start, start + pageSize), total, page, pages, pageSize };
 }
 
-// Where the catalogue photos live. By default they are served from the app's
-// own /public folder (`public/catalogo-img/<SKU>.jpg`), which needs no CSP or
-// image-host changes. Point NEXT_PUBLIC_CATALOG_IMG_BASE at a CDN/Blob base to
-// serve them from elsewhere.
+const IMAGE_MAP = catalogImages as Record<string, string>;
+
+// Resolve a catalogue photo URL for a SKU. Preferred source is the SKU→URL map
+// in src/data/catalog-images.json, produced by scripts/upload-catalog-images.mjs
+// after uploading the photos to Vercel Blob (keeps 400+ MB out of git and works
+// with the existing Blob CSP/remotePatterns). Falls back to a local
+// /catalogo-img/<SKU>.jpg path (or NEXT_PUBLIC_CATALOG_IMG_BASE) until uploaded;
+// the UI shows a branded placeholder if the image 404s.
 export function catalogImageUrl(sku: string): string {
+  const mapped = IMAGE_MAP[sku];
+  if (mapped) return mapped;
   const base = (process.env.NEXT_PUBLIC_CATALOG_IMG_BASE || "/catalogo-img").replace(/\/+$/, "");
   return `${base}/${encodeURIComponent(sku)}.jpg`;
 }
