@@ -1,10 +1,11 @@
 "use server";
 
 import { headers } from "next/headers";
-import { prisma } from "@/lib/prisma";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/client-ip";
+import { getStripe } from "@/lib/stripe";
 import { findBySku } from "@/lib/catalog";
+import { RESERVATION_DEPOSIT_CENTS } from "@/lib/reservation";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
@@ -19,12 +20,12 @@ export interface ReserveInput {
 export interface ReserveResult {
   ok: boolean;
   error?: string;
-  id?: string;
+  url?: string; // Stripe Checkout URL for the deposit
 }
 
-// Create a reservation for a catalogue model. No payment is taken — the store
-// contacts the customer when the watch is available and they pay then.
-export async function createReservation(input: ReserveInput): Promise<ReserveResult> {
+// Start a reservation: opens a Stripe Checkout to take the refundable deposit.
+// The Reservation row is created by the webhook once the deposit is paid.
+export async function startReservationCheckout(input: ReserveInput): Promise<ReserveResult> {
   const ip = getClientIp(await headers());
   if (!rateLimit(`reserve:${ip}`, 8, 10 * 60_000).allowed) {
     return { ok: false, error: "Demasiadas solicitudes. Espera unos minutos." };
@@ -45,20 +46,45 @@ export async function createReservation(input: ReserveInput): Promise<ReserveRes
   if (phone.length > 40) return { ok: false, error: "Teléfono no válido." };
   if (note.length > 500) return { ok: false, error: "La nota es demasiado larga." };
 
+  const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000")
+    .replace(/[^\x20-\x7E]/g, "")
+    .trim();
+
   try {
-    const reservation = await prisma.reservation.create({
-      data: {
+    const session = await getStripe().checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      customer_email: email,
+      line_items: [
+        {
+          price_data: {
+            currency: "eur",
+            product_data: {
+              name: `Señal de reserva · ${item.brand} ${item.sku}`,
+              description: "Reembolsable si no conseguimos el reloj en 14 días. Se descuenta del precio final.",
+            },
+            unit_amount: RESERVATION_DEPOSIT_CENTS,
+          },
+          quantity: 1,
+        },
+      ],
+      success_url: `${appUrl}/catalogo/reserva-confirmada?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/catalogo/${encodeURIComponent(item.sku)}`,
+      metadata: {
+        type: "reservation",
         sku: item.sku,
         brand: item.brand,
-        customerName: name,
-        customerEmail: email,
-        customerPhone: phone || null,
-        note: note || null,
+        name,
+        email,
+        phone,
+        note,
       },
     });
-    return { ok: true, id: reservation.id };
+
+    if (!session.url) return { ok: false, error: "No se pudo iniciar el pago." };
+    return { ok: true, url: session.url };
   } catch (err) {
-    console.error("Reservation create failed:", err);
-    return { ok: false, error: "No se pudo registrar la reserva. Inténtalo más tarde." };
+    console.error("Reservation checkout failed:", err);
+    return { ok: false, error: "No se pudo iniciar el pago de la señal. Inténtalo más tarde." };
   }
 }

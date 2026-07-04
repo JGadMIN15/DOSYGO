@@ -4,6 +4,7 @@ import { ChevronRight, CalendarClock, CreditCard, ShieldCheck } from "lucide-rea
 import CatalogImage from "../CatalogImage";
 import ReservationForm from "./ReservationForm";
 import { findBySku, catalogImageUrl } from "@/lib/catalog";
+import { RESERVATION_DEPOSIT_EUROS, RESERVATION_REFUND_DAYS } from "@/lib/reservation";
 
 interface Props {
   params: Promise<{ sku: string }>;
@@ -15,7 +16,7 @@ export async function generateMetadata({ params }: Props) {
   if (!item) return { title: "Modelo no encontrado — Dos&Go" };
   return {
     title: `${item.brand} ${item.sku} · Reservar — Dos&Go`,
-    description: `Reserva el ${item.brand} ${item.sku}. Cuando esté disponible te avisamos y lo pagas aquí.`,
+    description: `Reserva el ${item.brand} ${item.sku} con una señal de ${RESERVATION_DEPOSIT_EUROS} €, reembolsable si no lo conseguimos en ${RESERVATION_REFUND_DAYS} días.`,
   };
 }
 
@@ -69,19 +70,19 @@ export default async function CatalogDetailPage({ params }: Props) {
               <ul className="space-y-2 text-sm text-gray-600">
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full text-white text-[11px] font-bold flex items-center justify-center" style={{ background: "var(--brand)" }}>1</span>
-                  Reservas este modelo <strong>sin pagar nada ahora</strong>.
+                  <span>Para reservar, pagas una <strong>señal de {RESERVATION_DEPOSIT_EUROS} €</strong> (antes de fijar el precio final). Esa señal <strong>se descuenta</strong> del precio cuando compres.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full text-white text-[11px] font-bold flex items-center justify-center" style={{ background: "var(--brand)" }}>2</span>
-                  Cuando el reloj esté disponible, <strong>te avisamos por email</strong>.
+                  <span>Buscamos el reloj. Si <strong>no lo tenemos en stock en {RESERVATION_REFUND_DAYS} días</strong> (contados desde que reservas, no desde la entrega), <strong>te devolvemos la señal</strong> íntegra.</span>
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full text-white text-[11px] font-bold flex items-center justify-center" style={{ background: "var(--brand)" }}>3</span>
-                  <span className="inline-flex items-center gap-1"><CreditCard className="w-4 h-4" /> <strong>Lo pagas aquí</strong> y te lo enviamos.</span>
+                  <span className="inline-flex items-start gap-1"><CreditCard className="w-4 h-4 mt-0.5 flex-shrink-0" /> <span>Cuando lo conseguimos te avisamos y completas el pago por transferencia. <strong>Si no completas la transferencia, la señal no se devuelve.</strong></span></span>
                 </li>
               </ul>
               <p className="mt-3 text-xs text-gray-400 flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5" /> Sin compromiso: reservar no te obliga a comprar.
+                <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" /> Señal reembolsable si no conseguimos el reloj en {RESERVATION_REFUND_DAYS} días. Pago seguro con tarjeta (Stripe).
               </p>
             </div>
 

@@ -98,16 +98,20 @@ model AuditLog {
 // available the customer is contacted and pays then. The sku/brand are stored
 // denormalised (the catalogue itself lives in src/data/catalog.json, not the DB).
 model Reservation {
-  id            String   @id @default(cuid())
-  sku           String
-  brand         String
-  customerName  String
-  customerEmail String
-  customerPhone String?
-  note          String?
-  status        String   @default("pending") // pending | contacted | paid | cancelled
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id              String   @id @default(cuid())
+  sku             String
+  brand           String
+  customerName    String
+  customerEmail   String
+  customerPhone   String?
+  note            String?
+  depositCents    Int      @default(5000) // señal cobrada (céntimos)
+  stripeSessionId String?  @unique // sesión de pago de la señal
+  stripePaymentId String? // payment_intent, para reembolsar la señal
+  depositRefunded Boolean  @default(false)
+  status          String   @default("sourcing") // sourcing | in_stock | completed | refunded | forfeited | cancelled
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   @@index([status, createdAt])
   @@index([sku])

@@ -60,6 +60,40 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true, unpaid: true });
   }
 
+  // --- Reservation deposit: a catalogue reservation. No order/items/stock —
+  //     just record the reservation (idempotent via stripeSessionId). ---
+  if (session.metadata?.type === "reservation") {
+    const m = session.metadata;
+    const dup = await prisma.reservation.findUnique({
+      where: { stripeSessionId: session.id },
+      select: { id: true },
+    });
+    if (dup) return NextResponse.json({ received: true, duplicate: true });
+    try {
+      await prisma.reservation.create({
+        data: {
+          sku: String(m.sku ?? "").slice(0, 100),
+          brand: String(m.brand ?? "").slice(0, 100),
+          customerName: (String(m.name ?? "").trim() || session.customer_details?.name || "Cliente").slice(0, 100),
+          customerEmail: String(m.email ?? session.customer_details?.email ?? "").toLowerCase().slice(0, 254),
+          customerPhone: m.phone ? String(m.phone).slice(0, 40) : null,
+          note: m.note ? String(m.note).slice(0, 500) : null,
+          depositCents: session.amount_total ?? 5000,
+          stripeSessionId: session.id,
+          stripePaymentId: typeof session.payment_intent === "string" ? session.payment_intent : null,
+          status: "sourcing",
+        },
+      });
+    } catch (err) {
+      if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+        return NextResponse.json({ received: true, duplicate: true });
+      }
+      console.error("Reservation create failed:", err);
+      return NextResponse.json({ error: "Reservation processing failed" }, { status: 500 });
+    }
+    return NextResponse.json({ received: true, reservation: true });
+  }
+
   // --- Idempotency: Stripe delivers webhooks at-least-once and retries on
   //     non-2xx, so the same session can arrive multiple times. Never create
   //     the order (or decrement stock) twice. ---
