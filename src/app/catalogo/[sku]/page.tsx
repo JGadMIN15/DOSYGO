@@ -4,7 +4,7 @@ import { ChevronRight, CalendarClock, CreditCard, ShieldCheck } from "lucide-rea
 import CatalogImage from "../CatalogImage";
 import ReservationForm from "./ReservationForm";
 import { findBySku, catalogImageUrl } from "@/lib/catalog";
-import { RESERVATION_DEPOSIT_EUROS, RESERVATION_REFUND_DAYS } from "@/lib/reservation";
+import { RESERVATION_DEPOSIT_EUROS, RESERVATION_REFUND_DAYS, RESERVATION_CLAIM_HOURS } from "@/lib/reservation";
 
 interface Props {
   params: Promise<{ sku: string }>;
@@ -78,11 +78,15 @@ export default async function CatalogDetailPage({ params }: Props) {
                 </li>
                 <li className="flex items-start gap-2">
                   <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full text-white text-[11px] font-bold flex items-center justify-center" style={{ background: "var(--brand)" }}>3</span>
-                  <span className="inline-flex items-start gap-1"><CreditCard className="w-4 h-4 mt-0.5 flex-shrink-0" /> <span>Cuando lo conseguimos te avisamos y completas el pago por transferencia. <strong>Si no completas la transferencia, la señal no se devuelve.</strong></span></span>
+                  <span className="inline-flex items-start gap-1"><CreditCard className="w-4 h-4 mt-0.5 flex-shrink-0" /> <span>Cuando lo conseguimos te decimos el <strong>precio final</strong>. Tienes <strong>{RESERVATION_CLAIM_HOURS} h</strong> para decidir: si no te encaja, <strong>reclamas y te devolvemos la señal</strong>. Si no, se descuenta del precio y completas el pago.</span></span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="mt-0.5 flex-shrink-0 w-5 h-5 rounded-full text-white text-[11px] font-bold flex items-center justify-center" style={{ background: "var(--brand)" }}>!</span>
+                  <span>Si <strong>dejas la reserva olvidada</strong> —ni reclamas en {RESERVATION_CLAIM_HOURS} h ni completas el pago— <strong>pierdes la señal</strong>.</span>
                 </li>
               </ul>
               <p className="mt-3 text-xs text-gray-400 flex items-center gap-1.5">
-                <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" /> Señal reembolsable si no conseguimos el reloj en {RESERVATION_REFUND_DAYS} días. Pago seguro con tarjeta (Stripe).
+                <ShieldCheck className="w-3.5 h-3.5 flex-shrink-0" /> Señal reembolsable si no conseguimos el reloj en {RESERVATION_REFUND_DAYS} días o si reclamas en las {RESERVATION_CLAIM_HOURS} h tras el precio final. Pago seguro (Stripe).
               </p>
             </div>
 

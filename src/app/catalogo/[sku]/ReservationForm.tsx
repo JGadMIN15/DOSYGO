@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react";
 import { CreditCard } from "lucide-react";
 import { startReservationCheckout } from "../actions";
-import { RESERVATION_DEPOSIT_EUROS, RESERVATION_REFUND_DAYS } from "@/lib/reservation";
+import { RESERVATION_DEPOSIT_EUROS, RESERVATION_REFUND_DAYS, RESERVATION_CLAIM_HOURS } from "@/lib/reservation";
 
 export default function ReservationForm({ sku }: { sku: string }) {
   const [name, setName] = useState("");
@@ -83,9 +83,10 @@ export default function ReservationForm({ sku }: { sku: string }) {
           className="mt-0.5"
         />
         <span>
-          Acepto las condiciones: la señal es <strong>reembolsable</strong> si no conseguimos el reloj en{" "}
-          {RESERVATION_REFUND_DAYS} días desde la reserva; una vez conseguido, si <strong>no completo la transferencia</strong>{" "}
-          del importe restante, <strong>la señal no se devuelve</strong>.
+          Acepto las condiciones: la señal se <strong>descuenta</strong> del precio final; se <strong>devuelve</strong> si no
+          conseguimos el reloj en {RESERVATION_REFUND_DAYS} días o si <strong>reclamo en las {RESERVATION_CLAIM_HOURS} h</strong>{" "}
+          siguientes a que me comuniquéis el precio final; si <strong>dejo la reserva olvidada</strong> (no reclamo ni completo el
+          pago), <strong>la señal no se devuelve</strong>.
         </span>
       </label>
 

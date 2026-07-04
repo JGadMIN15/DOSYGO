@@ -106,6 +106,8 @@ model Reservation {
   customerPhone   String?
   note            String?
   depositCents    Int      @default(5000) // señal cobrada (céntimos)
+  finalPriceCents Int? // precio final que le comunicamos al cliente (céntimos)
+  pricedAt        DateTime? // momento en que fijamos el precio final: arranca la ventana de reclamación de 24h
   stripeSessionId String?  @unique // sesión de pago de la señal
   stripePaymentId String? // payment_intent, para reembolsar la señal
   depositRefunded Boolean  @default(false)

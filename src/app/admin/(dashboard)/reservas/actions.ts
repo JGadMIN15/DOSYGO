@@ -22,6 +22,24 @@ export async function updateReservationStatus(formData: FormData): Promise<void>
   if (!reservation) redirect("/admin/reservas");
 
   let depositRefunded = reservation.depositRefunded;
+  let finalPriceCents = reservation.finalPriceCents;
+  let pricedAt = reservation.pricedAt;
+
+  // Optional final price (euros) the admin communicates to the customer.
+  const priceRaw = String(formData.get("finalPrice") ?? "").trim().replace(",", ".");
+  const priceProvided = priceRaw.length > 0;
+  if (priceProvided) {
+    const euros = Number(priceRaw);
+    if (Number.isFinite(euros) && euros > 0 && euros < 1_000_000) {
+      finalPriceCents = Math.round(euros * 100);
+    }
+  }
+
+  // Moving to "in_stock" = we have it and set the final price → this starts the
+  // customer's 24h claim window. Anchor it now (or restart it if re-priced).
+  if (status === "in_stock" && (!pricedAt || priceProvided)) {
+    pricedAt = new Date();
+  }
 
   // When marking a reservation as refunded, try to return the deposit through
   // Stripe (best-effort — the admin can still mark it if the refund is manual).
@@ -34,7 +52,10 @@ export async function updateReservationStatus(formData: FormData): Promise<void>
     }
   }
 
-  await prisma.reservation.update({ where: { id }, data: { status, depositRefunded } });
+  await prisma.reservation.update({
+    where: { id },
+    data: { status, depositRefunded, finalPriceCents, pricedAt },
+  });
   revalidatePath("/admin/reservas");
   redirect("/admin/reservas");
 }

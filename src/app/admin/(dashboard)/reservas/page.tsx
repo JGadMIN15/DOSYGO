@@ -8,6 +8,7 @@ import {
   RESERVATION_STATUSES,
   RESERVATION_STATUS_LABEL,
   RESERVATION_REFUND_DAYS,
+  RESERVATION_CLAIM_HOURS,
 } from "@/lib/reservation";
 import { updateReservationStatus } from "./actions";
 
@@ -74,6 +75,8 @@ export default async function AdminReservationsPage({
   // eslint-disable-next-line react-hooks/purity -- request-time clock in a Server Component
   const nowMs = Date.now();
   const daysSince = (d: Date) => Math.floor((nowMs - d.getTime()) / 86_400_000);
+  const hoursLeft = (from: Date) =>
+    Math.max(0, Math.ceil((from.getTime() + RESERVATION_CLAIM_HOURS * 3_600_000 - nowMs) / 3_600_000));
 
   const pageHref = (p: number) =>
     `/admin/reservas?${new URLSearchParams({ ...(q ? { q } : {}), ...(estado ? { estado } : {}), page: String(p) })}`;
@@ -82,7 +85,7 @@ export default async function AdminReservationsPage({
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-1">Reservas</h1>
       <p className="text-sm text-gray-500 mb-4">
-        {total} {total === 1 ? "reserva" : "reservas"} del catálogo · señal reembolsable si no hay stock en {RESERVATION_REFUND_DAYS} días
+        {total} {total === 1 ? "reserva" : "reservas"} del catálogo · señal reembolsable si no hay stock en {RESERVATION_REFUND_DAYS} días o si el cliente reclama en las {RESERVATION_CLAIM_HOURS} h tras el precio final
       </p>
 
       <div className="flex flex-wrap items-center gap-2 mb-4">
@@ -123,6 +126,9 @@ export default async function AdminReservationsPage({
           {reservations.map((r) => {
             const days = daysSince(r.createdAt);
             const overdue = r.status === "sourcing" && days > RESERVATION_REFUND_DAYS;
+            const claimLeft = r.status === "in_stock" && r.pricedAt ? hoursLeft(r.pricedAt) : null;
+            const claimOpen = claimLeft !== null && claimLeft > 0;
+            const claimClosed = claimLeft !== null && claimLeft === 0;
             return (
               <div key={r.id} className={`bg-white rounded-xl border p-5 ${overdue ? "border-red-300" : "border-gray-200"}`}>
                 <div className="flex flex-wrap items-center justify-between gap-2 pb-3 border-b border-gray-100">
@@ -138,9 +144,22 @@ export default async function AdminReservationsPage({
                       Señal {formatPrice(r.depositCents)}
                       {r.depositRefunded && <span className="ml-1 font-normal text-gray-400">(devuelta)</span>}
                     </span>
+                    {r.finalPriceCents != null && (
+                      <span className="text-xs font-semibold text-gray-900">Precio final {formatPrice(r.finalPriceCents)}</span>
+                    )}
                     {overdue && (
                       <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
                         ⚠ {days} días sin stock — procede reembolso
+                      </span>
+                    )}
+                    {claimOpen && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-100 text-blue-700">
+                        Reclamación abierta · quedan {claimLeft} h
+                      </span>
+                    )}
+                    {claimClosed && (
+                      <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-purple-100 text-purple-700">
+                        Ventana de {RESERVATION_CLAIM_HOURS} h cerrada · señal retenible
                       </span>
                     )}
                   </div>
@@ -169,8 +188,19 @@ export default async function AdminReservationsPage({
                   >
                     Poner a la venta
                   </Link>
-                  <form action={updateReservationStatus} className="flex items-center gap-2 ml-auto">
+                  <form action={updateReservationStatus} className="flex flex-wrap items-center gap-2 ml-auto">
                     <input type="hidden" name="id" value={r.id} />
+                    <input
+                      name="finalPrice"
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      inputMode="decimal"
+                      placeholder="Precio final €"
+                      defaultValue={r.finalPriceCents != null ? (r.finalPriceCents / 100).toFixed(2) : ""}
+                      title="Al pasar a «En stock», el precio final arranca la ventana de 24 h de reclamación"
+                      className="w-28 rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+                    />
                     <select name="status" defaultValue={r.status} className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm">
                       {STATUS_OPTIONS.map((s) => (
                         <option key={s.value} value={s.value}>{s.label}</option>

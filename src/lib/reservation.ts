@@ -4,6 +4,9 @@
 export const RESERVATION_DEPOSIT_CENTS = 5000; // 50 €
 export const RESERVATION_DEPOSIT_EUROS = 50;
 export const RESERVATION_REFUND_DAYS = 14; // from reservation until WE have stock
+// Once we set the final price, the customer has this window to claim the deposit
+// back. After it, an unclaimed/unpaid reservation may be forfeited (we keep it).
+export const RESERVATION_CLAIM_HOURS = 24;
 
 export const RESERVATION_STATUSES = [
   "sourcing", // deposit paid, we're getting the watch

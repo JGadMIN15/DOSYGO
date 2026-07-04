@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CheckCircle, ChevronRight, Clock, CreditCard, AlertTriangle } from "lucide-react";
 import { getStripe } from "@/lib/stripe";
 import { formatPrice } from "@/lib/format";
-import { RESERVATION_DEPOSIT_CENTS, RESERVATION_REFUND_DAYS } from "@/lib/reservation";
+import { RESERVATION_DEPOSIT_CENTS, RESERVATION_REFUND_DAYS, RESERVATION_CLAIM_HOURS } from "@/lib/reservation";
 
 interface Props {
   searchParams: Promise<{ session_id?: string }>;
@@ -67,15 +67,16 @@ export default async function ReservaConfirmadaPage({ searchParams }: Props) {
           <li className="flex items-start gap-2.5">
             <CreditCard className="w-5 h-5 flex-shrink-0" style={{ color: "var(--brand)" }} />
             <span>
-              Cuando lo tengamos en stock te avisamos por email y completas el pago por transferencia. La señal
-              <strong> se descuenta</strong> del precio final.
+              Cuando lo consigamos te comunicamos el <strong>precio final</strong>. Tienes <strong>{RESERVATION_CLAIM_HOURS} h</strong>{" "}
+              para reclamar la devolución si no te encaja; si no, la señal <strong>se descuenta</strong> del precio y completas el
+              pago por transferencia.
             </span>
           </li>
           <li className="flex items-start gap-2.5">
             <AlertTriangle className="w-5 h-5 flex-shrink-0 text-amber-500" />
             <span>
-              Si una vez conseguido el reloj <strong>no completas la transferencia</strong>, la señal
-              <strong> no se devuelve</strong>.
+              Si <strong>dejas la reserva olvidada</strong> —ni reclamas en {RESERVATION_CLAIM_HOURS} h ni completas el pago—, la
+              señal <strong>no se devuelve</strong>.
             </span>
           </li>
         </ul>
