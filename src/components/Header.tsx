@@ -22,7 +22,7 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-50 bg-white" style={{ borderBottom: "1px solid var(--border)" }}>
+    <header className="sticky top-0 z-50" style={{ background: "#0b0b0f" }}>
 
       {/* Promotional bar */}
       <div
@@ -38,13 +38,9 @@ export default function Header() {
 
           {/* Logo */}
           <Link href="/" className="flex-shrink-0 flex items-baseline gap-0.5">
-            <span className="font-display text-2xl font-bold tracking-tight" style={{ color: "var(--brand)" }}>
-              Dos
-            </span>
-            <span className="font-display text-2xl font-bold tracking-tight text-gray-900">&amp;</span>
-            <span className="font-display text-2xl font-bold tracking-tight" style={{ color: "var(--brand)" }}>
-              Go
-            </span>
+            <span className="font-display text-2xl font-bold tracking-tight" style={{ color: "var(--brand)" }}>Dos</span>
+            <span className="font-display text-2xl font-bold tracking-tight text-white">&amp;</span>
+            <span className="font-display text-2xl font-bold tracking-tight" style={{ color: "var(--brand)" }}>Go</span>
           </Link>
 
           {/* Search — desktop */}
@@ -55,12 +51,12 @@ export default function Header() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar relojes, marcas..."
-                className="w-full pl-4 pr-11 py-2.5 text-sm rounded-full bg-gray-50 border focus:outline-none focus:bg-white transition-all"
-                style={{ borderColor: "var(--border)" }}
+                className="w-full pl-4 pr-11 py-2.5 text-sm rounded-full bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-white/30 focus:bg-white/10 transition-all"
               />
               <button
                 type="submit"
-                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-red-600 transition-colors"
+                aria-label="Buscar"
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500 hover:text-red-500 transition-colors"
               >
                 <Search className="w-4 h-4" />
               </button>
@@ -69,18 +65,16 @@ export default function Header() {
 
           {/* Actions */}
           <div className="flex items-center gap-1">
-            {/* Relojes link — desktop */}
             <Link
               href="/productos"
-              className="hidden md:inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-red-600 transition-colors rounded-lg hover:bg-gray-50"
+              className="hidden md:inline-flex items-center px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors rounded-lg hover:bg-white/5"
             >
               Relojes
             </Link>
 
-            {/* Catálogo (reserva) — desktop */}
             <Link
               href="/catalogo"
-              className="hidden md:inline-flex items-center px-4 py-2 text-sm font-medium text-gray-600 hover:text-red-600 transition-colors rounded-lg hover:bg-gray-50"
+              className="hidden md:inline-flex items-center px-4 py-2 text-sm font-medium text-gray-300 hover:text-white transition-colors rounded-lg hover:bg-white/5"
             >
               Catálogo
             </Link>
@@ -88,10 +82,10 @@ export default function Header() {
             {/* Cart */}
             <Link
               href="/carrito"
-              className="relative flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-gray-50 transition-colors"
+              className="relative flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-white/5 transition-colors"
             >
               <div className="relative">
-                <ShoppingCart className="w-5 h-5 text-gray-700" />
+                <ShoppingCart className="w-5 h-5 text-gray-200" />
                 {count > 0 && (
                   <span
                     className="absolute -top-1.5 -right-1.5 w-[17px] h-[17px] flex items-center justify-center rounded-full text-white text-[9px] font-bold"
@@ -101,12 +95,12 @@ export default function Header() {
                   </span>
                 )}
               </div>
-              <span className="hidden sm:block text-sm font-medium text-gray-700">Carrito</span>
+              <span className="hidden sm:block text-sm font-medium text-gray-200">Carrito</span>
             </Link>
 
             {/* Hamburger */}
             <button
-              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
+              className="md:hidden p-2 rounded-lg text-gray-200 hover:bg-white/5 transition-colors"
               onClick={() => setMenuOpen(!menuOpen)}
               aria-label="Menú"
             >
@@ -116,9 +110,12 @@ export default function Header() {
         </div>
       </div>
 
+      {/* Gold hairline */}
+      <div className="h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(201,169,110,0.45), transparent)" }} />
+
       {/* Mobile menu */}
       {menuOpen && (
-        <div className="md:hidden border-t bg-white shadow-lg" style={{ borderColor: "var(--border)" }}>
+        <div className="md:hidden border-t shadow-lg" style={{ borderColor: "rgba(255,255,255,0.08)", background: "#0b0b0f" }}>
           <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col gap-3">
             {/* Mobile search */}
             <form onSubmit={handleSearch} className="relative">
@@ -127,17 +124,16 @@ export default function Header() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Buscar relojes, marcas..."
-                className="w-full pl-4 pr-11 py-2.5 text-sm rounded-full bg-gray-50 border focus:outline-none"
-                style={{ borderColor: "var(--border)" }}
+                className="w-full pl-4 pr-11 py-2.5 text-sm rounded-full bg-white/5 border border-white/10 text-white placeholder-gray-500 focus:outline-none focus:border-white/30"
               />
-              <button type="submit" className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400">
+              <button type="submit" aria-label="Buscar" className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-500">
                 <Search className="w-4 h-4" />
               </button>
             </form>
 
             <Link
               href="/productos"
-              className="px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-gray-50 rounded-lg transition-colors"
+              className="px-3 py-2.5 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
               onClick={() => setMenuOpen(false)}
             >
               Todos los relojes
@@ -145,7 +141,7 @@ export default function Header() {
 
             <Link
               href="/catalogo"
-              className="px-3 py-2.5 text-sm font-medium text-gray-700 hover:text-red-600 hover:bg-gray-50 rounded-lg transition-colors"
+              className="px-3 py-2.5 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
               onClick={() => setMenuOpen(false)}
             >
               Catálogo · Reservar

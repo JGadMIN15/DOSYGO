@@ -72,6 +72,10 @@ body {
 .fade-in-up-2{ animation: fadeInUp 0.65s 0.15s cubic-bezier(0.22,1,0.36,1) both; }
 .fade-in-up-3{ animation: fadeInUp 0.65s 0.30s cubic-bezier(0.22,1,0.36,1) both; }
 
+/* Hero carousel: fade each new watch/chip in on model change */
+@keyframes heroSwap { from { opacity: 0; } to { opacity: 1; } }
+.hero-swap { animation: heroSwap 0.55s ease; }
+
 /* ── Utilities ──────────────────────────────────── */
 .line-clamp-2 {
   display: -webkit-box;

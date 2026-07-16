@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import WatchCard from "@/components/WatchCard";
 import LogoTransparent from "@/components/LogoTransparent";
 import CatalogImage from "@/app/catalogo/CatalogImage";
+import HeroCarousel from "@/components/HeroCarousel";
 import { catalogItemsWithImages, catalogImageUrl, CATALOG_SIZE } from "@/lib/catalog";
 import { ChevronRight, ArrowRight, Shield, Truck, RotateCcw, Award } from "lucide-react";
 
@@ -29,9 +30,9 @@ export default async function HomePage() {
   });
 
   // Real watch photos from the reservation catalogue power the showcase.
-  const showcase = catalogItemsWithImages(6);
-  const hero = showcase[0] ?? null;
-  const collection = showcase.slice(1, 5);
+  const showcase = catalogItemsWithImages(12);
+  const heroModels = showcase.slice(0, 6).map((c) => ({ brand: c.brand, sku: c.sku, url: catalogImageUrl(c.sku) }));
+  const collection = showcase.slice(6, 10);
 
   const perks = [
     { icon: Truck,     title: "Envío gratis",        desc: "En pedidos +€100" },
@@ -100,37 +101,19 @@ export default async function HomePage() {
               </div>
             </div>
 
-            {/* Watch spotlight */}
-            <div className="flex justify-center items-center">
-              <div className="relative w-[320px] h-[320px] sm:w-[420px] sm:h-[420px] fade-in">
-                {/* ambient halo */}
-                <div className="absolute -inset-6 rounded-full" style={{ background: "radial-gradient(circle, rgba(227,30,36,0.20) 0%, rgba(201,169,110,0.10) 40%, transparent 66%)", filter: "blur(18px)" }} />
-                {/* gold ring */}
-                <div className="absolute inset-0 rounded-full" style={{ border: "1px solid rgba(201,169,110,0.35)" }} />
-                {/* white spotlight disc + watch (multiply melts the photo's white bg) */}
-                <div
-                  className="absolute inset-4 rounded-full overflow-hidden flex items-center justify-center"
-                  style={{ background: "#ffffff", boxShadow: "inset 0 1px 26px rgba(0,0,0,0.07), 0 40px 90px rgba(0,0,0,0.55)" }}
-                >
-                  {hero ? (
-                    <CatalogImage
-                      src={catalogImageUrl(hero.sku)}
-                      brand={hero.brand}
-                      sku={hero.sku}
-                      className="w-[82%] h-[82%] object-contain mix-blend-multiply"
-                    />
-                  ) : (
+            {/* Watch spotlight (rotates through models) */}
+            {heroModels.length > 0 ? (
+              <HeroCarousel models={heroModels} />
+            ) : (
+              <div className="flex justify-center items-center">
+                <div className="relative w-[320px] h-[320px] sm:w-[420px] sm:h-[420px] fade-in">
+                  <div className="absolute inset-0 rounded-full" style={{ border: "1px solid rgba(201,169,110,0.35)" }} />
+                  <div className="absolute inset-4 rounded-full flex items-center justify-center" style={{ background: "#0f0f14" }}>
                     <LogoTransparent className="w-3/4 h-auto" />
-                  )}
-                </div>
-                {/* caption chip */}
-                {hero && (
-                  <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-[0.18em] text-white whitespace-nowrap shadow-lg" style={{ background: "var(--brand)" }}>
-                    {hero.brand}
                   </div>
-                )}
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
