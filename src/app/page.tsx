@@ -4,11 +4,10 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import WatchCard from "@/components/WatchCard";
 import LogoTransparent from "@/components/LogoTransparent";
-import CatalogImage from "@/app/catalogo/CatalogImage";
 import HeroCarousel from "@/components/HeroCarousel";
 import CatalogCard from "@/app/catalogo/CatalogCard";
 import { randomCatalogItemsWithImages, randomCatalogSampleWithImages, catalogImageUrl, CATALOG_SIZE } from "@/lib/catalog";
-import { ChevronRight, ArrowRight, Shield, Truck, RotateCcw, Award } from "lucide-react";
+import { ChevronRight, Shield, Truck, RotateCcw, Award } from "lucide-react";
 
 export default async function HomePage() {
   // Only products that are still available (no end date, or end date in the future)
@@ -32,9 +31,7 @@ export default async function HomePage() {
 
   // Real watch photos from the reservation catalogue power the showcase — random
   // models across different brands so the hero never repeats the same watch.
-  const showcase = randomCatalogItemsWithImages(10);
-  const heroModels = showcase.slice(0, 6).map((c) => ({ brand: c.brand, sku: c.sku, url: catalogImageUrl(c.sku) }));
-  const collection = showcase.slice(6, 10);
+  const heroModels = randomCatalogItemsWithImages(6).map((c) => ({ brand: c.brand, sku: c.sku, url: catalogImageUrl(c.sku) }));
   // Grid of real catalogue watches shown as you scroll the homepage.
   const gridItems = randomCatalogSampleWithImages(8);
 
@@ -142,66 +139,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      {/* ── Nueva colección (catálogo showcase) ───── */}
-      {collection.length >= 3 && (
-        <section className="max-w-7xl mx-auto px-6 lg:px-8 py-20 lg:py-28">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
-            {/* Big framed watch */}
-            <div className="relative">
-              <div
-                className="aspect-square rounded-3xl overflow-hidden flex items-center justify-center bg-white border border-gray-200/70"
-                style={{ boxShadow: "0 30px 70px rgba(0,0,0,0.10)" }}
-              >
-                <CatalogImage
-                  src={catalogImageUrl(collection[0].sku)}
-                  brand={collection[0].brand}
-                  sku={collection[0].sku}
-                  className="w-[78%] h-[78%] object-contain mix-blend-multiply"
-                />
-              </div>
-              <div className="absolute top-5 left-5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.16em] text-white shadow" style={{ background: "var(--brand)" }}>
-                Reservable
-              </div>
-            </div>
-
-            {/* Text + thumbnails */}
-            <div>
-              <span className="section-label">Nueva colección</span>
-              <h2 className="font-display text-3xl lg:text-5xl font-bold text-gray-900 leading-tight mb-5">
-                Encuentra tu próximo reloj
-              </h2>
-              <p className="text-gray-600 leading-relaxed mb-8 max-w-md">
-                Una amplia selección de las mejores marcas. Elige tu modelo y resérvalo con una señal: si no lo conseguimos, te la devolvemos.
-              </p>
-
-              <div className="grid grid-cols-2 gap-4 mb-9">
-                {collection.slice(1, 3).map((item) => (
-                  <Link key={item.sku} href={`/catalogo/${encodeURIComponent(item.sku)}`} className="group block rounded-2xl overflow-hidden border border-gray-200 bg-white watch-card">
-                    <div className="aspect-square flex items-center justify-center bg-white p-5">
-                      <CatalogImage
-                        src={catalogImageUrl(item.sku)}
-                        brand={item.brand}
-                        sku={item.sku}
-                        className="w-full h-full object-contain mix-blend-multiply group-hover:scale-[1.05] transition-transform duration-500"
-                      />
-                    </div>
-                    <div className="px-4 py-3">
-                      <p className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--gold)" }}>{item.brand}</p>
-                      <p className="text-xs font-mono text-gray-500 mt-0.5">Ref. {item.sku}</p>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-
-              <Link href="/catalogo" className="inline-flex items-center gap-2 font-semibold text-sm group" style={{ color: "var(--brand)" }}>
-                Ver todo el catálogo
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ── Relojes del catálogo (grid) ───────────── */}
       {gridItems.length > 0 && (
