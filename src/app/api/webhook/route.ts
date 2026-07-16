@@ -228,5 +228,33 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // --- Loyalty: credit the buyer's spend and level up. Runs only after a fresh
+  //     order.create succeeds (duplicate deliveries returned early above), so a
+  //     customer is never double-credited. 1 level (and 1 spin) per 400 €. ---
+  const buyerEmail = (session.metadata?.email ?? session.customer_details?.email ?? "").toLowerCase();
+  if (buyerEmail) {
+    try {
+      const customer = await prisma.customer.findUnique({
+        where: { email: buyerEmail },
+        select: { id: true, totalSpentCents: true, level: true },
+      });
+      if (customer) {
+        const newSpent = customer.totalSpentCents + (session.amount_total ?? 0);
+        const newLevel = Math.floor(newSpent / 40000); // 400 € per level
+        const spinsGained = Math.max(0, newLevel - customer.level);
+        await prisma.customer.update({
+          where: { id: customer.id },
+          data: {
+            totalSpentCents: newSpent,
+            level: newLevel,
+            pendingSpins: { increment: spinsGained },
+          },
+        });
+      }
+    } catch (err) {
+      console.error("Loyalty update failed:", trackingCode, err);
+    }
+  }
+
   return NextResponse.json({ received: true });
 }

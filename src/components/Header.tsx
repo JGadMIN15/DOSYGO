@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCartStore } from "@/lib/store";
-import { ShoppingCart, Search, Menu, X } from "lucide-react";
+import { ShoppingCart, Search, Menu, X, User } from "lucide-react";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
@@ -79,6 +79,15 @@ export default function Header() {
               Catálogo
             </Link>
 
+            {/* Cuenta */}
+            <Link
+              href="/cuenta"
+              aria-label="Mi cuenta"
+              className="hidden md:inline-flex items-center px-3 py-2 rounded-lg text-gray-300 hover:text-white hover:bg-white/5 transition-colors"
+            >
+              <User className="w-5 h-5" />
+            </Link>
+
             {/* Cart */}
             <Link
               href="/carrito"
@@ -146,6 +155,14 @@ export default function Header() {
               onClick={() => setMenuOpen(false)}
             >
               Catálogo · Reservar
+            </Link>
+
+            <Link
+              href="/cuenta"
+              className="px-3 py-2.5 text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 rounded-lg transition-colors inline-flex items-center gap-2"
+              onClick={() => setMenuOpen(false)}
+            >
+              <User className="w-4 h-4" /> Mi cuenta
             </Link>
           </div>
         </div>

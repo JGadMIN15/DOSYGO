@@ -127,3 +127,38 @@ model Settings {
   shippingCents     Int      @default(599) // coste de envío (céntimos)
   updatedAt         DateTime @updatedAt
 }
+
+// Customer loyalty account (separate from AdminUser). Login is username +
+// password; email links the account to its orders/reservations and applies
+// rewards. Guest checkout still works without an account.
+model Customer {
+  id              String           @id @default(cuid())
+  username        String           @unique
+  email           String           @unique
+  name            String?
+  passwordHash    String
+  totalSpentCents Int              @default(0) // suma de pedidos pagados (céntimos)
+  level           Int              @default(0) // 1 nivel por cada 400 € gastados
+  pendingSpins    Int              @default(0) // tiradas de ruleta por subir de nivel sin usar
+  welcomeSpun     Boolean          @default(false) // tirada de bienvenida ya usada
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  rewards         DiscountReward[]
+
+  @@index([email])
+}
+
+// A won discount (from the welcome spin or a level-up spin). Usable on ANY
+// future order, one per order (non-stackable), until `used`.
+model DiscountReward {
+  id         String    @id @default(cuid())
+  customerId String
+  percent    Int // 5 | 15 | 20 | 50
+  source     String // "welcome" | "levelup"
+  used       Boolean   @default(false)
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+  customer   Customer  @relation(fields: [customerId], references: [id])
+
+  @@index([customerId, used])
+}
