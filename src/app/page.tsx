@@ -43,7 +43,7 @@ export default async function HomePage() {
   ];
 
   return (
-    <div className="bg-white">
+    <div style={{ background: "#0a0a0d" }}>
 
       {/* ── Hero ──────────────────────────────────── */}
       <section
@@ -138,17 +138,14 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Smooth transition from the dark hero/perks into the light content */}
-      <div className="h-20" style={{ background: "linear-gradient(to bottom, #0a0a0d 0%, var(--surface) 100%)" }} />
-
-      {/* ── Relojes del catálogo (grid) ───────────── */}
+      {/* ── Relojes del catálogo (grid, sobre negro) ─ */}
       {gridItems.length > 0 && (
-        <section className="py-16 lg:py-20" style={{ background: "var(--surface)" }}>
+        <section className="py-16 lg:py-24" style={{ background: "#0a0a0d" }}>
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="flex items-end justify-between mb-8">
               <div>
                 <span className="section-label">Catálogo</span>
-                <h2 className="font-display text-3xl lg:text-4xl font-bold text-gray-900">Relojes para reservar</h2>
+                <h2 className="font-display text-3xl lg:text-4xl font-bold text-white">Relojes para reservar</h2>
               </div>
               <Link href="/catalogo" className="text-sm font-semibold flex items-center gap-1.5 hover:underline underline-offset-4" style={{ color: "var(--brand)" }}>
                 Ver todos <ChevronRight className="w-4 h-4" />
@@ -169,7 +166,7 @@ export default async function HomePage() {
           <div className="flex items-end justify-between mb-10">
             <div>
               <span className="section-label">Selección</span>
-              <h2 className="font-display text-3xl lg:text-4xl font-bold text-gray-900">Más destacados</h2>
+              <h2 className="font-display text-3xl lg:text-4xl font-bold text-white">Más destacados</h2>
             </div>
             <Link href="/productos" className="text-sm font-semibold flex items-center gap-1.5 hover:underline underline-offset-4" style={{ color: "var(--brand)" }}>
               Ver todos <ChevronRight className="w-4 h-4" />
@@ -185,12 +182,12 @@ export default async function HomePage() {
 
       {/* ── Newest (si hay tienda) ────────────────── */}
       {newest.length > 0 && (
-        <section className="py-20" style={{ background: "var(--surface)" }}>
+        <section className="py-20" style={{ background: "#0c0c11" }}>
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="flex items-end justify-between mb-10">
               <div>
                 <span className="section-label">Recién llegados</span>
-                <h2 className="font-display text-3xl lg:text-4xl font-bold text-gray-900">Últimas incorporaciones</h2>
+                <h2 className="font-display text-3xl lg:text-4xl font-bold text-white">Últimas incorporaciones</h2>
               </div>
               <Link href="/productos?orden=nuevo" className="text-sm font-semibold flex items-center gap-1.5 hover:underline underline-offset-4" style={{ color: "var(--brand)" }}>
                 Ver todos <ChevronRight className="w-4 h-4" />
@@ -207,7 +204,7 @@ export default async function HomePage() {
 
       {/* ── CTA banner ───────────────────────────── */}
       <section className="max-w-7xl mx-auto px-6 lg:px-8 py-20">
-        <div className="rounded-2xl relative overflow-hidden" style={{ background: "linear-gradient(135deg, var(--ink) 0%, var(--ink-2) 100%)" }}>
+        <div className="rounded-2xl relative overflow-hidden border border-white/10" style={{ background: "linear-gradient(135deg, var(--ink) 0%, var(--ink-2) 100%)" }}>
           <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--gold), transparent)" }} />
           <div className="px-10 lg:px-16 py-14 flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="relative">
