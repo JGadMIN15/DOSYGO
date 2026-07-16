@@ -6,20 +6,23 @@ import { catalogImageUrl, type CatalogItem } from "@/lib/catalog";
 export default function CatalogCard({ item }: { item: CatalogItem }) {
   return (
     <Link href={`/catalogo/${encodeURIComponent(item.sku)}`} className="group block">
-      <article className="bg-white rounded-xl overflow-hidden border border-gray-100 hover:shadow-lg hover:border-gray-200 transition-all">
-        <div className="relative aspect-square bg-white flex items-center justify-center p-6">
+      <article
+        className="rounded-2xl overflow-hidden border border-black/5 shadow-sm hover:shadow-2xl hover:-translate-y-0.5 transition-all duration-300"
+        style={{ background: "linear-gradient(180deg, #ffffff 0%, #f1efe9 100%)" }}
+      >
+        <div className="relative aspect-square flex items-center justify-center p-6">
           <CatalogImage
             src={catalogImageUrl(item.sku)}
             brand={item.brand}
             sku={item.sku}
-            className="w-full h-full object-contain mix-blend-multiply group-hover:scale-[1.04] transition-transform duration-500 ease-out"
+            className="w-full h-full object-contain mix-blend-multiply group-hover:scale-[1.05] transition-transform duration-500 ease-out"
           />
           <span className="absolute top-3 left-3 px-2.5 py-0.5 text-white text-[9px] font-bold uppercase tracking-[0.1em] rounded-sm" style={{ background: "var(--brand)" }}>
             Reservable
           </span>
         </div>
 
-        <div className="px-5 py-4 border-t border-gray-100">
+        <div className="px-5 py-4 border-t border-black/5">
           <p className="text-[9px] font-bold uppercase tracking-[0.22em] mb-1.5" style={{ color: "var(--gold)" }}>
             {item.brand}
           </p>

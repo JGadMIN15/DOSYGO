@@ -43,17 +43,15 @@ export default async function HomePage() {
   ];
 
   return (
-    <div style={{ background: "#0a0a0d" }}>
+    <div
+      style={{
+        background:
+          "radial-gradient(115% 60% at 85% 6%, rgba(158,27,31,0.12) 0%, transparent 44%), radial-gradient(90% 70% at 6% 96%, rgba(201,169,110,0.06) 0%, transparent 50%), linear-gradient(180deg, #0d0d13 0%, #0a0a0e 50%, #08080b 100%)",
+      }}
+    >
 
-      {/* ── Hero ──────────────────────────────────── */}
-      <section
-        className="relative overflow-hidden"
-        style={{
-          minHeight: "90vh",
-          background:
-            "radial-gradient(120% 90% at 78% 26%, rgba(158,27,31,0.16) 0%, transparent 44%), radial-gradient(90% 80% at 10% 92%, rgba(201,169,110,0.06) 0%, transparent 46%), linear-gradient(180deg, #0d0d12 0%, #08080b 100%)",
-        }}
-      >
+      {/* ── Hero (comparte el degradado de fondo) ─── */}
+      <section className="relative overflow-hidden" style={{ minHeight: "90vh" }}>
         {/* Subtle organic shape behind the watch */}
         <div
           className="hidden lg:block absolute -right-52 top-1/2 -translate-y-1/2 w-[760px] h-[760px] pointer-events-none opacity-70"
@@ -119,8 +117,8 @@ export default async function HomePage() {
 
       </section>
 
-      {/* ── Perks strip (dark, continues the hero) ── */}
-      <section style={{ background: "#0a0a0d" }}>
+      {/* ── Perks strip ──────────────────────────── */}
+      <section>
         <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             {perks.map(({ icon: Icon, title, desc }) => (
@@ -138,9 +136,9 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Relojes del catálogo (grid, sobre negro) ─ */}
+      {/* ── Relojes del catálogo (grid) ───────────── */}
       {gridItems.length > 0 && (
-        <section className="py-16 lg:py-24" style={{ background: "#0a0a0d" }}>
+        <section className="py-16 lg:py-24">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="flex items-end justify-between mb-8">
               <div>
@@ -182,7 +180,7 @@ export default async function HomePage() {
 
       {/* ── Newest (si hay tienda) ────────────────── */}
       {newest.length > 0 && (
-        <section className="py-20" style={{ background: "#0c0c11" }}>
+        <section className="py-20">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="flex items-end justify-between mb-10">
               <div>
