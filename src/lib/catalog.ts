@@ -103,6 +103,16 @@ export function randomCatalogItemsWithImages(n: number): CatalogItem[] {
   return picks.slice(0, n);
 }
 
+// Deterministic "watch of the day": same model all day, changes each day.
+// Uses the current date as a stable index into the models that have a photo.
+export function dailyCatalogItemWithImages(): CatalogItem | null {
+  const withImg: CatalogItem[] = [];
+  for (const c of CATALOG) if (IMAGE_MAP[c.sku]) withImg.push(c);
+  if (withImg.length === 0) return null;
+  const dayIndex = Math.floor(Date.now() / 86_400_000);
+  return withImg[dayIndex % withImg.length];
+}
+
 // Random sample of `n` distinct models that have a photo (may repeat brands) —
 // used to fill a grid on the homepage. Random each request.
 export function randomCatalogSampleWithImages(n: number): CatalogItem[] {
