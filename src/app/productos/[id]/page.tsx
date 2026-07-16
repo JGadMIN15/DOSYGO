@@ -77,7 +77,7 @@ export default async function ProductPage({ params }: Props) {
             <p className="text-xs font-bold uppercase tracking-widest mb-1.5" style={{ color: "var(--brand)" }}>
               {product.brand}
             </p>
-            <h1 className="text-3xl font-black text-gray-900 mb-3 leading-tight">{product.name}</h1>
+            <h1 className="font-display text-3xl lg:text-4xl font-bold text-gray-900 mb-3 leading-tight">{product.name}</h1>
 
             {/* Rating */}
             <div className="flex items-center gap-2 mb-5">
@@ -157,13 +157,13 @@ export default async function ProductPage({ params }: Props) {
         {/* Related */}
         {related.length > 0 && (
           <section className="border-t border-gray-200 pt-12">
-            <h2 className="text-xl font-black text-gray-900 mb-6">También te puede gustar</h2>
+            <h2 className="font-display text-2xl font-bold text-gray-900 mb-6">También te puede gustar</h2>
             <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               {related.map((p) => {
                 const imgs = parseImages(p.images);
                 return (
                   <Link key={p.id} href={`/productos/${p.id}`} className="group bg-white rounded-xl border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                    <div className="relative aspect-square bg-gray-50">
+                    <div className="relative aspect-square bg-white">
                       {imgs[0] ? (
                         <Image src={imgs[0]} alt={p.name} fill sizes="25vw" className="object-contain p-4" />
                       ) : (

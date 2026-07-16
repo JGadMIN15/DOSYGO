@@ -46,15 +46,12 @@ export default function WatchCard({ product }: { product: Product }) {
       <article className="bg-white rounded-xl overflow-hidden watch-card border border-gray-100">
 
         {/* Image */}
-        <div
-          className="relative overflow-hidden aspect-square"
-          style={{ background: "linear-gradient(145deg, #f9f9f9 0%, #f0f0f0 100%)" }}
-        >
+        <div className="relative overflow-hidden aspect-square bg-white flex items-center justify-center p-5">
           <WatchImage
             src={images[0]}
             name={product.name}
             category={product.category}
-            className="w-full h-full object-contain p-5 group-hover:scale-[1.04] transition-transform duration-700 ease-out"
+            className="w-full h-full object-contain group-hover:scale-[1.04] transition-transform duration-700 ease-out"
           />
 
           {/* Badges */}

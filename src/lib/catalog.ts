@@ -103,6 +103,24 @@ export function randomCatalogItemsWithImages(n: number): CatalogItem[] {
   return picks.slice(0, n);
 }
 
+// Random sample of `n` distinct models that have a photo (may repeat brands) —
+// used to fill a grid on the homepage. Random each request.
+export function randomCatalogSampleWithImages(n: number): CatalogItem[] {
+  const withImg: CatalogItem[] = [];
+  for (const c of CATALOG) if (IMAGE_MAP[c.sku]) withImg.push(c);
+
+  const res: CatalogItem[] = [];
+  const used = new Set<number>();
+  const max = withImg.length;
+  while (res.length < n && res.length < max) {
+    const idx = Math.floor(Math.random() * max);
+    if (used.has(idx)) continue;
+    used.add(idx);
+    res.push(withImg[idx]);
+  }
+  return res;
+}
+
 // Resolve a catalogue photo URL for a SKU. Preferred source is the SKU→URL map
 // in src/data/catalog-images.json, produced by scripts/upload-catalog-images.mjs
 // after uploading the photos to Vercel Blob (keeps 400+ MB out of git and works

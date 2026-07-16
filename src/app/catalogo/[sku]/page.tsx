@@ -40,12 +40,12 @@ export default async function CatalogDetailPage({ params }: Props) {
         <div className="grid md:grid-cols-2 gap-8">
           {/* Image */}
           <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-            <div className="relative aspect-square" style={{ background: "linear-gradient(145deg, #f9f9f9 0%, #f0f0f0 100%)" }}>
+            <div className="relative aspect-square bg-white flex items-center justify-center p-10">
               <CatalogImage
                 src={catalogImageUrl(item.sku)}
                 brand={item.brand}
                 sku={item.sku}
-                className="w-full h-full object-contain p-10"
+                className="w-full h-full object-contain mix-blend-multiply"
               />
               <span className="absolute top-4 left-4 px-3 py-1 text-white text-[10px] font-bold uppercase tracking-[0.12em] rounded-sm" style={{ background: "var(--brand)" }}>
                 Reservable
@@ -58,7 +58,7 @@ export default async function CatalogDetailPage({ params }: Props) {
             <p className="text-[10px] font-bold uppercase tracking-[0.22em] mb-1" style={{ color: "var(--gold)" }}>
               {item.brand}
             </p>
-            <h1 className="text-2xl font-black text-gray-900 mb-1">Reloj {item.brand}</h1>
+            <h1 className="font-display text-3xl font-bold text-gray-900 mb-1">Reloj {item.brand}</h1>
             <p className="text-sm font-mono text-gray-500 mb-5">Ref. {item.sku}</p>
 
             {/* How reservation works */}

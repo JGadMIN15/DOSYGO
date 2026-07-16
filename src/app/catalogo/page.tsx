@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight, CalendarClock, CreditCard } from "lucide-react";
 import CatalogCard from "./CatalogCard";
 import { allBrands, filterCatalog, CATALOG_SIZE } from "@/lib/catalog";
+import { RESERVATION_DEPOSIT_EUROS, RESERVATION_REFUND_DAYS } from "@/lib/reservation";
 
 export const metadata = {
   title: "Catálogo · Reserva tu reloj — Dos&Go",
@@ -44,24 +45,24 @@ export default async function CatalogoPage({ searchParams }: Props) {
 
         {/* Reservation explainer banner */}
         <div
-          className="rounded-2xl p-6 sm:p-8 mb-6 text-white"
-          style={{ background: "linear-gradient(120deg, var(--brand) 0%, var(--brand-dark) 100%)" }}
+          className="relative overflow-hidden rounded-2xl p-7 sm:p-9 mb-6"
+          style={{ background: "radial-gradient(120% 130% at 85% 12%, rgba(158,27,31,0.28) 0%, transparent 46%), linear-gradient(180deg, #0d0d12 0%, #0a0a0d 100%)" }}
         >
-          <div className="flex items-start gap-3">
-            <CalendarClock className="w-7 h-7 flex-shrink-0 mt-0.5" />
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-black mb-2">Catálogo de reserva</h1>
-              <p className="text-white/90 max-w-2xl leading-relaxed">
-                Este es nuestro catálogo completo ({CATALOG_SIZE.toLocaleString("es-ES")} modelos). Los relojes de
-                aquí <strong>aún no están a la venta</strong>. Si te interesa uno,{" "}
-                <strong>resérvalo sin pagar nada ahora</strong>: cuando esté disponible te avisamos y{" "}
-                <strong>lo pagas aquí</strong>.
-              </p>
-              <div className="mt-3 inline-flex items-center gap-2 text-sm bg-white/15 rounded-full px-3 py-1">
-                <CreditCard className="w-4 h-4" />
-                Reservar es gratis · Pagas solo cuando salga
-              </div>
-            </div>
+          <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(201,169,110,0.5), transparent)" }} />
+          <span className="text-gold text-[10px] font-bold uppercase tracking-[0.28em]">Catálogo · Reserva</span>
+          <h1 className="font-display text-3xl sm:text-4xl font-bold text-white mt-2 mb-3">Reserva tu próximo reloj</h1>
+          <p className="text-gray-400 max-w-2xl leading-relaxed">
+            Nuestro catálogo completo: <span className="text-gray-200 font-semibold">{CATALOG_SIZE.toLocaleString("es-ES")}</span>{" "}
+            modelos. Elige el tuyo y resérvalo con una <strong className="text-white">señal de {RESERVATION_DEPOSIT_EUROS} €</strong>. Si no
+            lo conseguimos en {RESERVATION_REFUND_DAYS} días, te la devolvemos íntegra.
+          </p>
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-2 text-xs text-gray-100 bg-white/10 rounded-full px-3 py-1.5">
+              <CreditCard className="w-4 h-4" style={{ color: "var(--gold)" }} /> Señal de {RESERVATION_DEPOSIT_EUROS} € · se descuenta del precio
+            </span>
+            <span className="inline-flex items-center gap-2 text-xs text-gray-100 bg-white/10 rounded-full px-3 py-1.5">
+              <CalendarClock className="w-4 h-4" style={{ color: "var(--gold)" }} /> Reembolsable si no hay stock en {RESERVATION_REFUND_DAYS} días
+            </span>
           </div>
         </div>
 
@@ -111,7 +112,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
             {/* Toolbar + search */}
             <div className="bg-white rounded-xl border border-gray-200 px-5 py-3.5 mb-5 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <h2 className="font-bold text-gray-900 text-sm">
+                <h2 className="font-display font-bold text-gray-900 text-lg">
                   {marca ? marca : buscar ? `Resultados para "${buscar}"` : "Todo el catálogo"}
                 </h2>
                 <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">

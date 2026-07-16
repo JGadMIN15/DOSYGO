@@ -96,8 +96,8 @@ export default async function ReservaTicketPage({ params }: Props) {
 
         {/* Modelo */}
         <div className="bg-white rounded-2xl border border-gray-200 p-5 mb-5 flex items-center gap-4">
-          <div className="w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden" style={{ background: "linear-gradient(145deg,#f9f9f9,#f0f0f0)" }}>
-            <CatalogImage src={catalogImageUrl(r.sku)} brand={r.brand} sku={r.sku} className="w-full h-full object-contain p-3" />
+          <div className="w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden bg-white border border-gray-100 flex items-center justify-center p-3">
+            <CatalogImage src={catalogImageUrl(r.sku)} brand={r.brand} sku={r.sku} className="w-full h-full object-contain mix-blend-multiply" />
           </div>
           <div className="min-w-0">
             <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "var(--gold, #b45309)" }}>{r.brand}</p>

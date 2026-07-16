@@ -6,7 +6,8 @@ import WatchCard from "@/components/WatchCard";
 import LogoTransparent from "@/components/LogoTransparent";
 import CatalogImage from "@/app/catalogo/CatalogImage";
 import HeroCarousel from "@/components/HeroCarousel";
-import { randomCatalogItemsWithImages, catalogImageUrl, CATALOG_SIZE } from "@/lib/catalog";
+import CatalogCard from "@/app/catalogo/CatalogCard";
+import { randomCatalogItemsWithImages, randomCatalogSampleWithImages, catalogImageUrl, CATALOG_SIZE } from "@/lib/catalog";
 import { ChevronRight, ArrowRight, Shield, Truck, RotateCcw, Award } from "lucide-react";
 
 export default async function HomePage() {
@@ -34,6 +35,8 @@ export default async function HomePage() {
   const showcase = randomCatalogItemsWithImages(10);
   const heroModels = showcase.slice(0, 6).map((c) => ({ brand: c.brand, sku: c.sku, url: catalogImageUrl(c.sku) }));
   const collection = showcase.slice(6, 10);
+  // Grid of real catalogue watches shown as you scroll the homepage.
+  const gridItems = randomCatalogSampleWithImages(8);
 
   const perks = [
     { icon: Truck,     title: "Envío gratis",        desc: "En pedidos +€100" },
@@ -195,6 +198,28 @@ export default async function HomePage() {
                 Ver todo el catálogo
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
               </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Relojes del catálogo (grid) ───────────── */}
+      {gridItems.length > 0 && (
+        <section className="py-16 lg:py-20" style={{ background: "var(--surface)" }}>
+          <div className="max-w-7xl mx-auto px-6 lg:px-8">
+            <div className="flex items-end justify-between mb-8">
+              <div>
+                <span className="section-label">Catálogo</span>
+                <h2 className="font-display text-3xl lg:text-4xl font-bold text-gray-900">Relojes para reservar</h2>
+              </div>
+              <Link href="/catalogo" className="text-sm font-semibold flex items-center gap-1.5 hover:underline underline-offset-4" style={{ color: "var(--brand)" }}>
+                Ver todos <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+              {gridItems.map((item) => (
+                <CatalogCard key={item.sku} item={item} />
+              ))}
             </div>
           </div>
         </section>

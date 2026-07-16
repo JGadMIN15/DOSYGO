@@ -126,7 +126,7 @@ export default async function ProductosPage({ searchParams }: Props) {
             <div className="bg-white rounded-xl border border-gray-200 px-5 py-3.5 mb-5 flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <SlidersHorizontal className="w-4 h-4 text-gray-400" />
-                <h1 className="font-bold text-gray-900 text-sm">
+                <h1 className="font-display font-bold text-gray-900 text-lg">
                   {buscar ? `Resultados para "${buscar}"` : "Todos los relojes"}
                 </h1>
                 <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
