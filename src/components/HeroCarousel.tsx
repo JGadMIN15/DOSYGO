@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import CatalogImage from "@/app/catalogo/CatalogImage";
 
 export interface HeroModel {
@@ -34,9 +35,12 @@ export default function HeroCarousel({ models }: { models: HeroModel[] }) {
         />
         {/* gold ring */}
         <div className="absolute inset-0 rounded-full" style={{ border: "1px solid rgba(201,169,110,0.35)" }} />
-        {/* white spotlight disc with cross-fading watches */}
-        <div
-          className="absolute inset-4 rounded-full overflow-hidden"
+        {/* white spotlight disc with cross-fading watches — clicking goes to
+            the model currently shown */}
+        <Link
+          href={`/catalogo/${encodeURIComponent(active.sku)}`}
+          aria-label={`Reservar ${active.brand} ${active.sku}`}
+          className="absolute inset-4 rounded-full overflow-hidden block transition-transform duration-300 ease-out hover:scale-[1.03]"
           style={{ background: "#ffffff", boxShadow: "inset 0 1px 30px rgba(0,0,0,0.08), 0 44px 96px rgba(0,0,0,0.55)" }}
         >
           {models.map((m, k) => (
@@ -57,7 +61,7 @@ export default function HeroCarousel({ models }: { models: HeroModel[] }) {
               />
             </div>
           ))}
-        </div>
+        </Link>
 
         {/* brand chip (cross-fades) */}
         <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 h-7 w-40 pointer-events-none">
