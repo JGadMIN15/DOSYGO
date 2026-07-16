@@ -79,6 +79,30 @@ export function catalogItemsWithImages(n: number, brand?: string): CatalogItem[]
   return out;
 }
 
+// Random showcase models with a real photo, spread across DIFFERENT brands so
+// the hero never repeats the same watch. Picks one random model per brand, then
+// shuffles brands and takes `n`. Random each request (home is force-dynamic).
+export function randomCatalogItemsWithImages(n: number): CatalogItem[] {
+  const byBrand = new Map<string, CatalogItem[]>();
+  for (const c of CATALOG) {
+    if (!IMAGE_MAP[c.sku]) continue;
+    const arr = byBrand.get(c.brand);
+    if (arr) arr.push(c);
+    else byBrand.set(c.brand, [c]);
+  }
+
+  const picks: CatalogItem[] = [];
+  for (const arr of byBrand.values()) {
+    picks.push(arr[Math.floor(Math.random() * arr.length)]);
+  }
+  // Fisher–Yates shuffle so the brands appear in a random order too.
+  for (let i = picks.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [picks[i], picks[j]] = [picks[j], picks[i]];
+  }
+  return picks.slice(0, n);
+}
+
 // Resolve a catalogue photo URL for a SKU. Preferred source is the SKU→URL map
 // in src/data/catalog-images.json, produced by scripts/upload-catalog-images.mjs
 // after uploading the photos to Vercel Blob (keeps 400+ MB out of git and works

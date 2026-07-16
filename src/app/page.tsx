@@ -6,7 +6,7 @@ import WatchCard from "@/components/WatchCard";
 import LogoTransparent from "@/components/LogoTransparent";
 import CatalogImage from "@/app/catalogo/CatalogImage";
 import HeroCarousel from "@/components/HeroCarousel";
-import { catalogItemsWithImages, catalogImageUrl, CATALOG_SIZE } from "@/lib/catalog";
+import { randomCatalogItemsWithImages, catalogImageUrl, CATALOG_SIZE } from "@/lib/catalog";
 import { ChevronRight, ArrowRight, Shield, Truck, RotateCcw, Award } from "lucide-react";
 
 export default async function HomePage() {
@@ -29,8 +29,9 @@ export default async function HomePage() {
     orderBy: { createdAt: "desc" },
   });
 
-  // Real watch photos from the reservation catalogue power the showcase.
-  const showcase = catalogItemsWithImages(12);
+  // Real watch photos from the reservation catalogue power the showcase — random
+  // models across different brands so the hero never repeats the same watch.
+  const showcase = randomCatalogItemsWithImages(10);
   const heroModels = showcase.slice(0, 6).map((c) => ({ brand: c.brand, sku: c.sku, url: catalogImageUrl(c.sku) }));
   const collection = showcase.slice(6, 10);
 

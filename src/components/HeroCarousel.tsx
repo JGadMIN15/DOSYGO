@@ -17,7 +17,7 @@ export default function HeroCarousel({ models }: { models: HeroModel[] }) {
 
   useEffect(() => {
     if (models.length <= 1) return;
-    const t = setInterval(() => setI((p) => (p + 1) % models.length), 5200);
+    const t = setInterval(() => setI((p) => (p + 1) % models.length), 7000);
     return () => clearInterval(t);
   }, [models.length]);
 
@@ -46,7 +46,7 @@ export default function HeroCarousel({ models }: { models: HeroModel[] }) {
               className="absolute inset-0 flex items-center justify-center will-change-[opacity]"
               style={{
                 opacity: k === i ? 1 : 0,
-                transition: "opacity 900ms cubic-bezier(0.4, 0, 0.2, 1)",
+                transition: "opacity 1600ms ease-in-out",
               }}
             >
               <CatalogImage
@@ -66,7 +66,7 @@ export default function HeroCarousel({ models }: { models: HeroModel[] }) {
               key={m.sku}
               aria-hidden={k !== i}
               className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-[0.18em] text-white shadow-lg"
-              style={{ background: "var(--brand)", opacity: k === i ? 1 : 0, transition: "opacity 600ms ease" }}
+              style={{ background: "var(--brand)", opacity: k === i ? 1 : 0, transition: "opacity 1200ms ease-in-out" }}
             >
               {m.brand}
             </span>
