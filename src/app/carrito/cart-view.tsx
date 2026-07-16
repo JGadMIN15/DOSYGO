@@ -3,8 +3,8 @@
 import { useCartStore } from "@/lib/store";
 import WatchImage from "@/components/WatchImage";
 import Link from "next/link";
-import { Trash2, ShoppingBag, ChevronRight, Shield, Truck } from "lucide-react";
-import { useState } from "react";
+import { Trash2, ShoppingBag, ChevronRight, Shield, Truck, AlertTriangle } from "lucide-react";
+import { useState, useEffect } from "react";
 import { formatPrice } from "@/lib/format";
 
 export default function CartView({
@@ -18,6 +18,39 @@ export default function CartView({
   const [loading, setLoading] = useState(false);
   const [accepted, setAccepted] = useState(false);
   const [phone, setPhone] = useState("");
+  const [removedCount, setRemovedCount] = useState(0);
+  const [outOfStock, setOutOfStock] = useState<Set<string>>(new Set());
+
+  // Re-validate the cart against the DB: drop products that were
+  // removed/archived/expired and flag out-of-stock ones. Prevents "ghost" items
+  // lingering in the cart after the admin takes a product down. Runs on load and
+  // again if a checkout attempt is rejected for availability.
+  const revalidateCart = async () => {
+    const ids = useCartStore.getState().items.map((i) => i.id);
+    if (ids.length === 0) return;
+    try {
+      const res = await fetch("/api/cart/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const removed: string[] = Array.isArray(data.removedIds) ? data.removedIds : [];
+      removed.forEach((id) => useCartStore.getState().removeItem(id));
+      if (removed.length) setRemovedCount((c) => c + removed.length);
+      setOutOfStock(new Set(Array.isArray(data.outOfStockIds) ? data.outOfStockIds : []));
+    } catch {
+      // fail-open: never wipe the cart on a transient error
+    }
+  };
+
+  useEffect(() => {
+    // Genuine on-mount data check (fetch → state); state is set only after the
+    // async response, not synchronously.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    void revalidateCart();
+  }, []);
 
   const [email, setEmail] = useState("");
   const [codeSent, setCodeSent] = useState(false);
@@ -79,7 +112,7 @@ export default function CartView({
   };
 
   const handleCheckout = async () => {
-    if (items.length === 0 || !accepted || !phoneValid || !emailVerified) return;
+    if (items.length === 0 || !accepted || !phoneValid || !emailVerified || outOfStock.size > 0) return;
     setLoading(true);
     try {
       const res = await fetch("/api/checkout", {
@@ -91,7 +124,10 @@ export default function CartView({
       if (data.url) {
         window.location.href = data.url;
       } else {
-        alert(data.error ?? "Error al procesar el pago. Inténtalo de nuevo.");
+        // Likely an availability/stock change since the cart loaded — re-check
+        // so the offending items get removed/flagged, then tell the user.
+        await revalidateCart();
+        alert(data.error ?? "Algún producto ya no está disponible. Revisa tu carrito.");
       }
     } catch {
       alert("Error de conexión. Inténtalo de nuevo.");
@@ -103,6 +139,12 @@ export default function CartView({
   if (items.length === 0) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+        {removedCount > 0 && (
+          <div className="mb-6 inline-flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-left">
+            <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+            <span>Quitamos {removedCount} {removedCount === 1 ? "producto que ya no estaba disponible" : "productos que ya no estaban disponibles"} de tu carrito.</span>
+          </div>
+        )}
         <div className="w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6" style={{ background: "rgba(227,30,36,0.08)" }}>
           <ShoppingBag className="w-12 h-12" style={{ color: "var(--brand)" }} />
         </div>
@@ -129,16 +171,36 @@ export default function CartView({
         Carrito <span className="text-gray-400 font-normal text-xl">({count()} {count() === 1 ? "artículo" : "artículos"})</span>
       </h1>
 
+      {removedCount > 0 && (
+        <div className="mb-5 flex items-start gap-2 text-sm text-amber-700 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <span>Quitamos {removedCount} {removedCount === 1 ? "producto que ya no estaba disponible" : "productos que ya no estaban disponibles"} de tu carrito.</span>
+        </div>
+      )}
+      {outOfStock.size > 0 && (
+        <div className="mb-5 flex items-start gap-2 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <AlertTriangle className="w-4 h-4 mt-0.5 flex-shrink-0" />
+          <span>Tienes productos <strong>agotados</strong> en el carrito. Quítalos para poder continuar con el pago.</span>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Items */}
         <div className="lg:col-span-2 space-y-4">
-          {items.map((item) => (
-            <div key={item.id} className="bg-white rounded-2xl border border-gray-100 p-4 flex gap-4 shadow-sm">
+          {items.map((item) => {
+            const isOut = outOfStock.has(item.id);
+            return (
+            <div key={item.id} className={`bg-white rounded-2xl border p-4 flex gap-4 shadow-sm ${isOut ? "border-red-300" : "border-gray-100"}`}>
               <div className="w-24 h-24 bg-gradient-to-br from-gray-50 to-gray-100 rounded-xl overflow-hidden flex-shrink-0 flex items-center justify-center">
                 <WatchImage src={item.image} name={item.name} category="Relojes" className="w-full h-full scale-90" />
               </div>
               <div className="flex-1 min-w-0">
                 <h3 className="font-semibold text-gray-900 text-sm leading-tight mb-1 truncate">{item.name}</h3>
+                {isOut && (
+                  <span className="inline-block mb-1 text-[10px] font-bold uppercase tracking-wide text-red-700 bg-red-100 px-2 py-0.5 rounded">
+                    Agotado
+                  </span>
+                )}
                 <p className="font-bold text-lg" style={{ color: "var(--brand)" }}>
                   {formatPrice(item.price)}
                 </p>
@@ -173,7 +235,8 @@ export default function CartView({
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
         {/* Resumen */}
@@ -305,7 +368,7 @@ export default function CartView({
 
             <button
               onClick={handleCheckout}
-              disabled={loading || !accepted || !phoneValid || !emailVerified}
+              disabled={loading || !accepted || !phoneValid || !emailVerified || outOfStock.size > 0}
               className="w-full py-4 rounded-2xl text-white font-bold text-base flex items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed disabled:scale-100"
               style={{ background: "var(--brand)" }}
             >
