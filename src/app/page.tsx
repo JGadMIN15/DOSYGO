@@ -117,28 +117,29 @@ export default async function HomePage() {
           </div>
         </div>
 
-        {/* Bottom fade to white */}
-        <div className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none" style={{ background: "linear-gradient(to bottom, transparent, rgba(255,255,255,0.05))" }} />
       </section>
 
-      {/* ── Perks strip ──────────────────────────── */}
-      <section className="border-b" style={{ borderColor: "var(--border)", background: "var(--surface)" }}>
-        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-5">
+      {/* ── Perks strip (dark, continues the hero) ── */}
+      <section style={{ background: "#0a0a0d" }}>
+        <div className="max-w-7xl mx-auto px-6 lg:px-8 py-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             {perks.map(({ icon: Icon, title, desc }) => (
               <div key={title} className="flex items-center gap-3.5">
-                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(227,30,36,0.07)" }}>
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(227,30,36,0.14)" }}>
                   <Icon className="w-5 h-5" style={{ color: "var(--brand)" }} />
                 </div>
                 <div>
-                  <p className="font-semibold text-gray-900 text-sm">{title}</p>
-                  <p className="text-gray-500 text-xs mt-0.5">{desc}</p>
+                  <p className="font-semibold text-white text-sm">{title}</p>
+                  <p className="text-gray-400 text-xs mt-0.5">{desc}</p>
                 </div>
               </div>
             ))}
           </div>
         </div>
       </section>
+
+      {/* Smooth transition from the dark hero/perks into the light content */}
+      <div className="h-20" style={{ background: "linear-gradient(to bottom, #0a0a0d 0%, var(--surface) 100%)" }} />
 
       {/* ── Relojes del catálogo (grid) ───────────── */}
       {gridItems.length > 0 && (
