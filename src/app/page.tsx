@@ -102,23 +102,22 @@ export default async function HomePage() {
 
             {/* Watch spotlight */}
             <div className="flex justify-center items-center">
-              <div className="relative w-[300px] h-[300px] sm:w-[400px] sm:h-[400px] fade-in">
-                {/* glow */}
-                <div className="absolute inset-0 rounded-full" style={{ boxShadow: "0 0 140px rgba(227,30,36,0.28), 0 0 70px rgba(201,169,110,0.18)" }} />
-                {/* rings */}
-                <div className="absolute inset-0 rounded-full" style={{ border: "1px solid rgba(201,169,110,0.22)" }} />
-                <div className="absolute inset-6 rounded-full" style={{ border: "1px solid rgba(227,30,36,0.16)" }} />
-                {/* spotlight disc + watch */}
+              <div className="relative w-[320px] h-[320px] sm:w-[420px] sm:h-[420px] fade-in">
+                {/* ambient halo */}
+                <div className="absolute -inset-6 rounded-full" style={{ background: "radial-gradient(circle, rgba(227,30,36,0.20) 0%, rgba(201,169,110,0.10) 40%, transparent 66%)", filter: "blur(18px)" }} />
+                {/* gold ring */}
+                <div className="absolute inset-0 rounded-full" style={{ border: "1px solid rgba(201,169,110,0.35)" }} />
+                {/* white spotlight disc + watch (multiply melts the photo's white bg) */}
                 <div
-                  className="absolute inset-10 rounded-full overflow-hidden flex items-center justify-center"
-                  style={{ background: "radial-gradient(circle at 50% 42%, #f6f5f3 0%, #e7e4de 46%, #cfccc4 100%)" }}
+                  className="absolute inset-4 rounded-full overflow-hidden flex items-center justify-center"
+                  style={{ background: "#ffffff", boxShadow: "inset 0 1px 26px rgba(0,0,0,0.07), 0 40px 90px rgba(0,0,0,0.55)" }}
                 >
                   {hero ? (
                     <CatalogImage
                       src={catalogImageUrl(hero.sku)}
                       brand={hero.brand}
                       sku={hero.sku}
-                      className="w-full h-full object-contain p-8 drop-shadow-2xl"
+                      className="w-[82%] h-[82%] object-contain mix-blend-multiply"
                     />
                   ) : (
                     <LogoTransparent className="w-3/4 h-auto" />
@@ -126,7 +125,7 @@ export default async function HomePage() {
                 </div>
                 {/* caption chip */}
                 {hero && (
-                  <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-[0.18em] text-white whitespace-nowrap" style={{ background: "var(--brand)" }}>
+                  <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-[0.18em] text-white whitespace-nowrap shadow-lg" style={{ background: "var(--brand)" }}>
                     {hero.brand}
                   </div>
                 )}
@@ -165,17 +164,17 @@ export default async function HomePage() {
             {/* Big framed watch */}
             <div className="relative">
               <div
-                className="aspect-square rounded-3xl overflow-hidden flex items-center justify-center"
-                style={{ background: "radial-gradient(circle at 50% 40%, #ffffff 0%, #f2f0eb 55%, #e6e3db 100%)" }}
+                className="aspect-square rounded-3xl overflow-hidden flex items-center justify-center bg-white border border-gray-200/70"
+                style={{ boxShadow: "0 30px 70px rgba(0,0,0,0.10)" }}
               >
                 <CatalogImage
                   src={catalogImageUrl(collection[0].sku)}
                   brand={collection[0].brand}
                   sku={collection[0].sku}
-                  className="w-full h-full object-contain p-12"
+                  className="w-[78%] h-[78%] object-contain mix-blend-multiply"
                 />
               </div>
-              <div className="absolute top-5 left-5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.16em] text-white" style={{ background: "var(--brand)" }}>
+              <div className="absolute top-5 left-5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.16em] text-white shadow" style={{ background: "var(--brand)" }}>
                 Reservable
               </div>
             </div>
@@ -193,12 +192,12 @@ export default async function HomePage() {
               <div className="grid grid-cols-2 gap-4 mb-9">
                 {collection.slice(1, 3).map((item) => (
                   <Link key={item.sku} href={`/catalogo/${encodeURIComponent(item.sku)}`} className="group block rounded-2xl overflow-hidden border border-gray-200 bg-white watch-card">
-                    <div className="aspect-square flex items-center justify-center" style={{ background: "linear-gradient(145deg,#f9f9f9,#f0f0f0)" }}>
+                    <div className="aspect-square flex items-center justify-center bg-white p-5">
                       <CatalogImage
                         src={catalogImageUrl(item.sku)}
                         brand={item.brand}
                         sku={item.sku}
-                        className="w-full h-full object-contain p-5 group-hover:scale-[1.05] transition-transform duration-500"
+                        className="w-full h-full object-contain mix-blend-multiply group-hover:scale-[1.05] transition-transform duration-500"
                       />
                     </div>
                     <div className="px-4 py-3">
