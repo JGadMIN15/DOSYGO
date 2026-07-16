@@ -4,7 +4,9 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import WatchCard from "@/components/WatchCard";
 import LogoTransparent from "@/components/LogoTransparent";
-import { ChevronRight, Shield, Truck, RotateCcw, Award } from "lucide-react";
+import CatalogImage from "@/app/catalogo/CatalogImage";
+import { catalogItemsWithImages, catalogImageUrl, CATALOG_SIZE } from "@/lib/catalog";
+import { ChevronRight, ArrowRight, Shield, Truck, RotateCcw, Award } from "lucide-react";
 
 export default async function HomePage() {
   // Only products that are still available (no end date, or end date in the future)
@@ -26,110 +28,115 @@ export default async function HomePage() {
     orderBy: { createdAt: "desc" },
   });
 
+  // Real watch photos from the reservation catalogue power the showcase.
+  const showcase = catalogItemsWithImages(6);
+  const hero = showcase[0] ?? null;
+  const collection = showcase.slice(1, 5);
+
   const perks = [
     { icon: Truck,     title: "Envío gratis",        desc: "En pedidos +€100" },
     { icon: Shield,    title: "Garantía 2 años",     desc: "En todos los relojes" },
     { icon: RotateCcw, title: "30 días devolución",  desc: "Sin preguntas" },
-    { icon: Award,     title: "Calidad certificada", desc: "Movimientos suizos" },
+    { icon: Award,     title: "Calidad certificada", desc: "Selección premium" },
   ];
 
   return (
     <div className="bg-white">
 
       {/* ── Hero ──────────────────────────────────── */}
-      <section
-        className="relative overflow-hidden"
-        style={{
-          background: "linear-gradient(135deg, #0d0d12 0%, #1a0a0b 45%, #0d0d12 100%)",
-          minHeight: "88vh",
-        }}
-      >
-        {/* Ambient glows */}
+      <section className="relative overflow-hidden" style={{ background: "#0a0a0d", minHeight: "90vh" }}>
+        {/* Ambient glows + organic shape */}
         <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute -top-52 -left-40 w-[620px] h-[620px] rounded-full opacity-25" style={{ background: "var(--brand)", filter: "blur(150px)" }} />
+          <div className="absolute top-1/3 -right-24 w-[560px] h-[560px] rounded-full opacity-20" style={{ background: "var(--gold)", filter: "blur(150px)" }} />
+          {/* Organic curved shape behind the watch (reference style) */}
           <div
-            className="absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full opacity-20"
-            style={{ background: "var(--brand)", filter: "blur(120px)" }}
-          />
-          <div
-            className="absolute -bottom-40 -right-20 w-[500px] h-[500px] rounded-full opacity-15"
-            style={{ background: "var(--gold)", filter: "blur(140px)" }}
+            className="hidden lg:block absolute -right-40 -top-24 w-[820px] h-[820px] opacity-90"
+            style={{
+              background: "radial-gradient(circle at 40% 40%, #17171d 0%, #0a0a0d 70%)",
+              borderRadius: "42% 58% 63% 37% / 45% 44% 56% 55%",
+            }}
           />
         </div>
 
-        {/* Thin decorative horizontal rule */}
-        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(201,169,110,0.4), transparent)" }} />
+        {/* Top gold hairline */}
+        <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(201,169,110,0.5), transparent)" }} />
 
-        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 flex items-center" style={{ minHeight: "88vh" }}>
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center w-full py-24 lg:py-0">
+        <div className="relative max-w-7xl mx-auto px-6 lg:px-8 flex items-center" style={{ minHeight: "90vh" }}>
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center w-full py-24 lg:py-0">
 
             {/* Text */}
             <div>
-              {/* Eyebrow */}
-              <div className="flex items-center gap-3 mb-8 fade-in">
-                <span className="h-px w-8" style={{ background: "var(--gold)" }} />
-                <span
-                  className="text-[10px] font-bold uppercase tracking-[0.25em]"
-                  style={{ color: "var(--gold)" }}
-                >
-                  Nueva Colección 2026
+              <div className="flex items-center gap-3 mb-7 fade-in">
+                <span className="h-px w-9" style={{ background: "var(--gold)" }} />
+                <span className="text-[10px] font-bold uppercase tracking-[0.28em]" style={{ color: "var(--gold)" }}>
+                  Relojería · Dos&amp;Go
                 </span>
               </div>
 
-              {/* Headline */}
-              <h1 className="fade-in-up font-display font-bold text-white leading-[1.05] mb-8" style={{ fontSize: "clamp(3.2rem, 7vw, 6rem)" }}>
+              <h1 className="fade-in-up font-display font-bold text-white leading-[1.02] mb-7" style={{ fontSize: "clamp(3rem, 6.6vw, 5.6rem)" }}>
                 El tiempo<br />
-                es <em className="not-italic" style={{ color: "var(--brand)" }}>tuyo.</em>
+                es <span style={{ color: "var(--brand)" }}>tuyo.</span>
               </h1>
 
-              {/* Body */}
-              <p className="fade-in-up-2 text-gray-400 leading-relaxed mb-10 max-w-md" style={{ fontSize: "1.0625rem" }}>
-                Relojes de precisión con diseño atemporal. Cada pieza es una declaración de quién eres.
+              <p className="fade-in-up-2 text-gray-400 leading-relaxed mb-9 max-w-md" style={{ fontSize: "1.0625rem" }}>
+                Relojes de precisión y diseño atemporal. Explora nuestro catálogo de más de{" "}
+                <span className="text-gray-200 font-semibold">{CATALOG_SIZE.toLocaleString("es-ES")}</span> modelos y resérvalo antes de que salga.
               </p>
 
-              {/* CTAs */}
               <div className="fade-in-up-3 flex flex-wrap gap-4">
-                <Link href="/productos" className="btn-primary">
-                  Ver colección <ChevronRight className="w-4 h-4" />
+                <Link href="/catalogo" className="btn-primary">
+                  Explorar catálogo <ChevronRight className="w-4 h-4" />
                 </Link>
-                <Link href="/productos?orden=nuevo" className="btn-ghost">
-                  Novedades
+                <Link href="/productos" className="btn-ghost">
+                  Ver tienda
                 </Link>
               </div>
 
-              {/* Trust strip */}
-              <div className="mt-12 fade-in-up-3 flex items-center gap-6 border-t pt-8" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+              <div className="mt-11 fade-in-up-3 flex flex-wrap items-center gap-x-6 gap-y-2 border-t pt-7" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
                 {["Envío a Europa", "Pago seguro", "Devolución 30 días"].map((t) => (
                   <span key={t} className="text-[11px] text-gray-500 uppercase tracking-widest">{t}</span>
                 ))}
               </div>
             </div>
 
-            {/* Logo orb */}
-            <div className="hidden lg:flex justify-center items-center">
-              <div className="relative w-80 h-80">
-                {/* Outer glow */}
+            {/* Watch spotlight */}
+            <div className="flex justify-center items-center">
+              <div className="relative w-[300px] h-[300px] sm:w-[400px] sm:h-[400px] fade-in">
+                {/* glow */}
+                <div className="absolute inset-0 rounded-full" style={{ boxShadow: "0 0 140px rgba(227,30,36,0.28), 0 0 70px rgba(201,169,110,0.18)" }} />
+                {/* rings */}
+                <div className="absolute inset-0 rounded-full" style={{ border: "1px solid rgba(201,169,110,0.22)" }} />
+                <div className="absolute inset-6 rounded-full" style={{ border: "1px solid rgba(227,30,36,0.16)" }} />
+                {/* spotlight disc + watch */}
                 <div
-                  className="absolute inset-0 rounded-full"
-                  style={{ boxShadow: "0 0 120px rgba(227,30,36,0.3), 0 0 60px rgba(201,169,110,0.15)" }}
-                />
-                {/* Rings */}
-                <div className="absolute inset-0 rounded-full" style={{ border: "1px solid rgba(201,169,110,0.2)" }} />
-                <div className="absolute inset-6 rounded-full" style={{ border: "1px solid rgba(227,30,36,0.15)" }} />
-                <div className="absolute inset-14 rounded-full" style={{ border: "1px solid rgba(201,169,110,0.1)" }} />
-                {/* Logo */}
-                <div className="absolute inset-0 flex items-center justify-center p-12">
-                  <LogoTransparent className="w-full h-auto drop-shadow-2xl" />
+                  className="absolute inset-10 rounded-full overflow-hidden flex items-center justify-center"
+                  style={{ background: "radial-gradient(circle at 50% 42%, #f6f5f3 0%, #e7e4de 46%, #cfccc4 100%)" }}
+                >
+                  {hero ? (
+                    <CatalogImage
+                      src={catalogImageUrl(hero.sku)}
+                      brand={hero.brand}
+                      sku={hero.sku}
+                      className="w-full h-full object-contain p-8 drop-shadow-2xl"
+                    />
+                  ) : (
+                    <LogoTransparent className="w-3/4 h-auto" />
+                  )}
                 </div>
+                {/* caption chip */}
+                {hero && (
+                  <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-[0.18em] text-white whitespace-nowrap" style={{ background: "var(--brand)" }}>
+                    {hero.brand}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Bottom fade */}
-        <div
-          className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
-          style={{ background: "linear-gradient(to bottom, transparent, rgba(255,255,255,0.04))" }}
-        />
+        {/* Bottom fade to white */}
+        <div className="absolute bottom-0 left-0 right-0 h-24 pointer-events-none" style={{ background: "linear-gradient(to bottom, transparent, rgba(255,255,255,0.05))" }} />
       </section>
 
       {/* ── Perks strip ──────────────────────────── */}
@@ -138,10 +145,7 @@ export default async function HomePage() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
             {perks.map(({ icon: Icon, title, desc }) => (
               <div key={title} className="flex items-center gap-3.5">
-                <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                  style={{ background: "rgba(227,30,36,0.07)" }}
-                >
+                <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0" style={{ background: "rgba(227,30,36,0.07)" }}>
                   <Icon className="w-5 h-5" style={{ color: "var(--brand)" }} />
                 </div>
                 <div>
@@ -154,21 +158,75 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── Featured products ─────────────────────── */}
+      {/* ── Nueva colección (catálogo showcase) ───── */}
+      {collection.length >= 3 && (
+        <section className="max-w-7xl mx-auto px-6 lg:px-8 py-20 lg:py-28">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Big framed watch */}
+            <div className="relative">
+              <div
+                className="aspect-square rounded-3xl overflow-hidden flex items-center justify-center"
+                style={{ background: "radial-gradient(circle at 50% 40%, #ffffff 0%, #f2f0eb 55%, #e6e3db 100%)" }}
+              >
+                <CatalogImage
+                  src={catalogImageUrl(collection[0].sku)}
+                  brand={collection[0].brand}
+                  sku={collection[0].sku}
+                  className="w-full h-full object-contain p-12"
+                />
+              </div>
+              <div className="absolute top-5 left-5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-[0.16em] text-white" style={{ background: "var(--brand)" }}>
+                Reservable
+              </div>
+            </div>
+
+            {/* Text + thumbnails */}
+            <div>
+              <span className="section-label">Nueva colección</span>
+              <h2 className="font-display text-3xl lg:text-5xl font-bold text-gray-900 leading-tight mb-5">
+                Encuentra tu próximo reloj
+              </h2>
+              <p className="text-gray-600 leading-relaxed mb-8 max-w-md">
+                Una amplia selección de las mejores marcas. Elige tu modelo y resérvalo con una señal: si no lo conseguimos, te la devolvemos.
+              </p>
+
+              <div className="grid grid-cols-2 gap-4 mb-9">
+                {collection.slice(1, 3).map((item) => (
+                  <Link key={item.sku} href={`/catalogo/${encodeURIComponent(item.sku)}`} className="group block rounded-2xl overflow-hidden border border-gray-200 bg-white watch-card">
+                    <div className="aspect-square flex items-center justify-center" style={{ background: "linear-gradient(145deg,#f9f9f9,#f0f0f0)" }}>
+                      <CatalogImage
+                        src={catalogImageUrl(item.sku)}
+                        brand={item.brand}
+                        sku={item.sku}
+                        className="w-full h-full object-contain p-5 group-hover:scale-[1.05] transition-transform duration-500"
+                      />
+                    </div>
+                    <div className="px-4 py-3">
+                      <p className="text-[9px] font-bold uppercase tracking-[0.2em]" style={{ color: "var(--gold)" }}>{item.brand}</p>
+                      <p className="text-xs font-mono text-gray-500 mt-0.5">Ref. {item.sku}</p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+
+              <Link href="/catalogo" className="inline-flex items-center gap-2 font-semibold text-sm group" style={{ color: "var(--brand)" }}>
+                Ver todo el catálogo
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* ── Featured products (si hay tienda) ─────── */}
       {featured.length > 0 && (
         <section className="max-w-7xl mx-auto px-6 lg:px-8 py-20">
           <div className="flex items-end justify-between mb-10">
             <div>
               <span className="section-label">Selección</span>
-              <h2 className="font-display text-3xl lg:text-4xl font-bold text-gray-900">
-                Más destacados
-              </h2>
+              <h2 className="font-display text-3xl lg:text-4xl font-bold text-gray-900">Más destacados</h2>
             </div>
-            <Link
-              href="/productos"
-              className="text-sm font-semibold flex items-center gap-1.5 hover:underline underline-offset-4"
-              style={{ color: "var(--brand)" }}
-            >
+            <Link href="/productos" className="text-sm font-semibold flex items-center gap-1.5 hover:underline underline-offset-4" style={{ color: "var(--brand)" }}>
               Ver todos <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
@@ -180,22 +238,16 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* ── Newest ───────────────────────────────── */}
+      {/* ── Newest (si hay tienda) ────────────────── */}
       {newest.length > 0 && (
         <section className="py-20" style={{ background: "var(--surface)" }}>
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="flex items-end justify-between mb-10">
               <div>
                 <span className="section-label">Recién llegados</span>
-                <h2 className="font-display text-3xl lg:text-4xl font-bold text-gray-900">
-                  Últimas incorporaciones
-                </h2>
+                <h2 className="font-display text-3xl lg:text-4xl font-bold text-gray-900">Últimas incorporaciones</h2>
               </div>
-              <Link
-                href="/productos?orden=nuevo"
-                className="text-sm font-semibold flex items-center gap-1.5 hover:underline underline-offset-4"
-                style={{ color: "var(--brand)" }}
-              >
+              <Link href="/productos?orden=nuevo" className="text-sm font-semibold flex items-center gap-1.5 hover:underline underline-offset-4" style={{ color: "var(--brand)" }}>
                 Ver todos <ChevronRight className="w-4 h-4" />
               </Link>
             </div>
@@ -210,31 +262,20 @@ export default async function HomePage() {
 
       {/* ── CTA banner ───────────────────────────── */}
       <section className="max-w-7xl mx-auto px-6 lg:px-8 py-20">
-        <div
-          className="rounded-2xl relative overflow-hidden"
-          style={{ background: "linear-gradient(135deg, var(--ink) 0%, var(--ink-2) 100%)" }}
-        >
-          {/* Gold accent line */}
+        <div className="rounded-2xl relative overflow-hidden" style={{ background: "linear-gradient(135deg, var(--ink) 0%, var(--ink-2) 100%)" }}>
           <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--gold), transparent)" }} />
-
           <div className="px-10 lg:px-16 py-14 flex flex-col md:flex-row items-center justify-between gap-8">
             <div className="relative">
-              <span className="section-label">Oferta especial</span>
+              <span className="section-label">Reserva sin riesgo</span>
               <h2 className="font-display text-3xl lg:text-4xl font-bold text-white mb-2">
-                Envío gratis en toda Europa
+                Señal reembolsable a 14 días
               </h2>
-              <p className="text-gray-400">En compras superiores a €100. Entrega en hasta 14 días hábiles.</p>
+              <p className="text-gray-400 max-w-lg">Resérvalo hoy con una señal. Si no conseguimos tu reloj en 14 días, te la devolvemos íntegra.</p>
             </div>
-            <Link
-              href="/productos"
-              className="flex-shrink-0 inline-flex items-center gap-2.5 px-8 py-3.5 rounded bg-white font-bold text-sm hover:opacity-90 transition-all hover:shadow-lg active:scale-95"
-              style={{ color: "var(--brand)", letterSpacing: "0.05em" }}
-            >
-              Comprar ahora <ChevronRight className="w-4 h-4" />
+            <Link href="/catalogo" className="flex-shrink-0 inline-flex items-center gap-2.5 px-8 py-3.5 rounded bg-white font-bold text-sm hover:opacity-90 transition-all hover:shadow-lg active:scale-95" style={{ color: "var(--brand)", letterSpacing: "0.05em" }}>
+              Reservar ahora <ChevronRight className="w-4 h-4" />
             </Link>
           </div>
-
-          {/* Bottom gold line */}
           <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--gold), transparent)" }} />
         </div>
       </section>

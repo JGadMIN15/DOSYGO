@@ -65,6 +65,20 @@ export function filterCatalog(opts: {
 
 const IMAGE_MAP = catalogImages as Record<string, string>;
 
+// A few catalogue models that are guaranteed to have a real photo (used for the
+// homepage showcase). Optionally restrict to a brand; falls back to any brand.
+export function catalogItemsWithImages(n: number, brand?: string): CatalogItem[] {
+  const out: CatalogItem[] = [];
+  for (const c of CATALOG) {
+    if (brand && c.brand !== brand) continue;
+    if (IMAGE_MAP[c.sku]) {
+      out.push(c);
+      if (out.length >= n) break;
+    }
+  }
+  return out;
+}
+
 // Resolve a catalogue photo URL for a SKU. Preferred source is the SKU→URL map
 // in src/data/catalog-images.json, produced by scripts/upload-catalog-images.mjs
 // after uploading the photos to Vercel Blob (keeps 400+ MB out of git and works
