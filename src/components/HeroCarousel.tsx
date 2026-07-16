@@ -38,8 +38,8 @@ export default function HeroCarousel({ models }: { models: HeroModel[] }) {
         {/* white spotlight disc with cross-fading watches — clicking goes to
             the model currently shown */}
         <Link
-          href={`/catalogo/${encodeURIComponent(active.sku)}`}
-          aria-label={`Reservar ${active.brand} ${active.sku}`}
+          href={`/catalogo?marca=${encodeURIComponent(active.brand)}`}
+          aria-label={`Ver relojes ${active.brand}`}
           className="absolute inset-4 rounded-full overflow-hidden block transition-transform duration-300 ease-out hover:scale-[1.03]"
           style={{ background: "#ffffff", boxShadow: "inset 0 1px 30px rgba(0,0,0,0.08), 0 44px 96px rgba(0,0,0,0.55)" }}
         >
