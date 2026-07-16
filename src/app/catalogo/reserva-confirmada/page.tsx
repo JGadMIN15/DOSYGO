@@ -2,6 +2,7 @@ import Link from "next/link";
 import { headers } from "next/headers";
 import { CheckCircle, ChevronRight, Clock, CreditCard, AlertTriangle } from "lucide-react";
 import { getStripe } from "@/lib/stripe";
+import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
 import { ensureReservationForSession } from "@/lib/reservation-server";
 import ReservationTicketLink from "@/components/ReservationTicketLink";
@@ -35,6 +36,7 @@ export default async function ReservaConfirmadaPage({ searchParams }: Props) {
   let ticket: string | null = null;
 
   if (session_id) {
+    let reservation: Awaited<ReturnType<typeof ensureReservationForSession>> = null;
     try {
       const session = await getStripe().checkout.sessions.retrieve(session_id);
       if (session.metadata?.type === "reservation") {
@@ -43,11 +45,24 @@ export default async function ReservaConfirmadaPage({ searchParams }: Props) {
         pagado = session.payment_status === "paid";
         // Create the reservation now if the webhook hasn't yet (idempotent), so
         // the customer always gets their ticket link on this screen.
-        const reservation = await ensureReservationForSession(session);
-        ticket = reservation?.ticket ?? null;
+        reservation = await ensureReservationForSession(session);
       }
     } catch {
-      // ignore — show the generic confirmation below
+      // Stripe retrieve failed (transient, or a key change mid-flow) — fall
+      // through to the DB lookup below so the ticket link still appears.
+    }
+
+    // Robustness: the webhook may have already created the reservation even if
+    // the Stripe call above failed. Look it up by session id so the ticket link
+    // and details always show once the deposit has been recorded.
+    if (!reservation) {
+      reservation = await prisma.reservation.findUnique({ where: { stripeSessionId: session_id } });
+    }
+    if (reservation) {
+      ticket = reservation.ticket;
+      pagado = true; // it exists ⇒ it was created from a paid deposit session
+      deposito = reservation.depositCents ?? deposito;
+      if (!modelo) modelo = [reservation.brand, reservation.sku].filter(Boolean).join(" ") || null;
     }
   }
 
