@@ -7,6 +7,7 @@ import WatchImage from "./WatchImage";
 import { useState } from "react";
 import { formatPrice } from "@/lib/format";
 import { parseImages } from "@/lib/images";
+import { toast } from "@/lib/toast";
 
 interface Product {
   id: string;
@@ -30,6 +31,7 @@ export default function WatchCard({ product }: { product: Product }) {
     e.stopPropagation();
     addItem({ id: product.id, name: product.name, price: product.price, image: images[0] ?? "" });
     setAdded(true);
+    toast(`${product.name} añadido al carrito`, "success");
     setTimeout(() => setAdded(false), 2000);
   };
 

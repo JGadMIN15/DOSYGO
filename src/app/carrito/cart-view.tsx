@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Trash2, ShoppingBag, ChevronRight, Shield, Truck, AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { formatPrice } from "@/lib/format";
+import { toast } from "@/lib/toast";
 
 export default function CartView({
   freeShippingCents,
@@ -127,10 +128,10 @@ export default function CartView({
         // Likely an availability/stock change since the cart loaded — re-check
         // so the offending items get removed/flagged, then tell the user.
         await revalidateCart();
-        alert(data.error ?? "Algún producto ya no está disponible. Revisa tu carrito.");
+        toast(data.error ?? "Algún producto ya no está disponible. Revisa tu carrito.", "error");
       }
     } catch {
-      alert("Error de conexión. Inténtalo de nuevo.");
+      toast("Error de conexión. Inténtalo de nuevo.", "error");
     } finally {
       setLoading(false);
     }

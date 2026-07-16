@@ -5,6 +5,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import CookieConsent from "@/components/CookieConsent";
 import ClockWidget from "@/components/ClockWidget";
+import Toaster from "@/components/Toaster";
 import { dailyCatalogItemWithImages, catalogImageUrl } from "@/lib/catalog";
 
 const playfair = Playfair_Display({
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Footer />
         <CookieConsent />
         <ClockWidget daily={daily} />
+        <Toaster />
       </body>
     </html>
   );

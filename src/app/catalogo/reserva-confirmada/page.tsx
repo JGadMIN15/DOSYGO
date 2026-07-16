@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
 import { ensureReservationForSession } from "@/lib/reservation-server";
 import ReservationTicketLink from "@/components/ReservationTicketLink";
+import Confetti from "@/components/Confetti";
 import { RESERVATION_DEPOSIT_CENTS, RESERVATION_REFUND_DAYS, RESERVATION_CLAIM_HOURS } from "@/lib/reservation";
 
 interface Props {
@@ -70,6 +71,7 @@ export default async function ReservaConfirmadaPage({ searchParams }: Props) {
 
   return (
     <div className="max-w-2xl mx-auto px-4 sm:px-6 py-12">
+      <Confetti />
       <div className="text-center mb-8">
         <div className="w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-4" style={{ background: "rgba(22,163,74,0.1)" }}>
           <CheckCircle className="w-10 h-10 text-green-600" />

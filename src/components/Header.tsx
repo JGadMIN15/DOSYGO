@@ -88,7 +88,8 @@ export default function Header() {
                 <ShoppingCart className="w-5 h-5 text-gray-200" />
                 {count > 0 && (
                   <span
-                    className="absolute -top-1.5 -right-1.5 w-[17px] h-[17px] flex items-center justify-center rounded-full text-white text-[9px] font-bold"
+                    key={count}
+                    className="badge-pop absolute -top-1.5 -right-1.5 w-[17px] h-[17px] flex items-center justify-center rounded-full text-white text-[9px] font-bold"
                     style={{ background: "var(--brand)" }}
                   >
                     {count > 9 ? "9+" : count}

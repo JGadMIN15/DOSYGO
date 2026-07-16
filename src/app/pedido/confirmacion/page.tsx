@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import Link from "next/link";
 import { CheckCircle, Package, Truck, Home, ChevronRight, MapPin } from "lucide-react";
 import ClearCartOnLoad from "@/components/ClearCartOnLoad";
+import Confetti from "@/components/Confetti";
 import { formatPrice } from "@/lib/format";
 import { verifyValue } from "@/lib/auth";
 
@@ -105,6 +106,7 @@ export default async function ConfirmationPage({ searchParams }: Props) {
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 py-12">
       <ClearCartOnLoad />
+      <Confetti />
 
       {/* Cabecera */}
       <div className="text-center mb-10">
