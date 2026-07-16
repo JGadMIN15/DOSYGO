@@ -45,20 +45,19 @@ export default async function HomePage() {
     <div className="bg-white">
 
       {/* ── Hero ──────────────────────────────────── */}
-      <section className="relative overflow-hidden" style={{ background: "#0a0a0d", minHeight: "90vh" }}>
-        {/* Ambient glows + organic shape */}
-        <div className="absolute inset-0 pointer-events-none">
-          <div className="absolute -top-52 -left-40 w-[620px] h-[620px] rounded-full opacity-25" style={{ background: "var(--brand)", filter: "blur(150px)" }} />
-          <div className="absolute top-1/3 -right-24 w-[560px] h-[560px] rounded-full opacity-20" style={{ background: "var(--gold)", filter: "blur(150px)" }} />
-          {/* Organic curved shape behind the watch (reference style) */}
-          <div
-            className="hidden lg:block absolute -right-40 -top-24 w-[820px] h-[820px] opacity-90"
-            style={{
-              background: "radial-gradient(circle at 40% 40%, #17171d 0%, #0a0a0d 70%)",
-              borderRadius: "42% 58% 63% 37% / 45% 44% 56% 55%",
-            }}
-          />
-        </div>
+      <section
+        className="relative overflow-hidden"
+        style={{
+          minHeight: "90vh",
+          background:
+            "radial-gradient(120% 90% at 78% 26%, rgba(158,27,31,0.16) 0%, transparent 44%), radial-gradient(90% 80% at 10% 92%, rgba(201,169,110,0.06) 0%, transparent 46%), linear-gradient(180deg, #0d0d12 0%, #08080b 100%)",
+        }}
+      >
+        {/* Subtle organic shape behind the watch */}
+        <div
+          className="hidden lg:block absolute -right-52 top-1/2 -translate-y-1/2 w-[760px] h-[760px] pointer-events-none opacity-70"
+          style={{ background: "radial-gradient(circle at 42% 42%, #16161d 0%, transparent 68%)", borderRadius: "44% 56% 62% 38% / 46% 44% 56% 54%" }}
+        />
 
         {/* Top gold hairline */}
         <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, rgba(201,169,110,0.5), transparent)" }} />
@@ -69,8 +68,8 @@ export default async function HomePage() {
             {/* Text */}
             <div>
               <div className="flex items-center gap-3 mb-7 fade-in">
-                <span className="h-px w-9" style={{ background: "var(--gold)" }} />
-                <span className="text-[10px] font-bold uppercase tracking-[0.28em]" style={{ color: "var(--gold)" }}>
+                <span className="h-px w-9" style={{ background: "linear-gradient(90deg, transparent, var(--gold))" }} />
+                <span className="text-gold text-[10px] font-bold uppercase tracking-[0.28em]">
                   Relojería · Dos&amp;Go
                 </span>
               </div>

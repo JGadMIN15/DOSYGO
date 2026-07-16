@@ -34,6 +34,14 @@ body {
 .font-display { font-family: var(--font-display, Georgia, serif); }
 .font-sans    { font-family: var(--font-sans, system-ui, sans-serif); }
 
+/* Metallic gold text (reads like real metal, not flat) */
+.text-gold {
+  background: linear-gradient(100deg, #ead6ab 0%, #c9a96e 46%, #a8864a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
 /* ── Cards ──────────────────────────────────────── */
 .watch-card {
   transition: box-shadow 0.3s ease, transform 0.3s ease;
@@ -128,7 +136,7 @@ body {
 .btn-primary:hover {
   background: var(--brand-dark);
   transform: translateY(-1px);
-  box-shadow: 0 8px 24px rgba(227,30,36,0.3);
+  box-shadow: 0 10px 30px rgba(158,27,31,0.35);
 }
 
 .btn-ghost {

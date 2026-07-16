@@ -9,66 +9,91 @@ export interface HeroModel {
   url: string;
 }
 
-// Rotating watch spotlight for the hero: cycles through catalogue models on a
-// white disc, with mix-blend-multiply so each photo's white background melts in.
+// Rotating watch spotlight. All models are stacked and cross-faded via opacity
+// transitions (a clean dissolve, no hard cut). White disc + mix-blend-multiply
+// melts each photo's white background so only the watch shows.
 export default function HeroCarousel({ models }: { models: HeroModel[] }) {
   const [i, setI] = useState(0);
 
   useEffect(() => {
     if (models.length <= 1) return;
-    const t = setInterval(() => setI((p) => (p + 1) % models.length), 4000);
+    const t = setInterval(() => setI((p) => (p + 1) % models.length), 5200);
     return () => clearInterval(t);
   }, [models.length]);
 
-  const m = models[i] ?? models[0];
-  if (!m) return null;
+  if (models.length === 0) return null;
+  const active = models[i] ?? models[0];
 
   return (
     <div className="flex justify-center items-center">
       <div className="relative w-[320px] h-[320px] sm:w-[420px] sm:h-[420px] fade-in">
         {/* ambient halo */}
         <div
-          className="absolute -inset-6 rounded-full"
-          style={{ background: "radial-gradient(circle, rgba(227,30,36,0.20) 0%, rgba(201,169,110,0.10) 40%, transparent 66%)", filter: "blur(18px)" }}
+          className="absolute -inset-8 rounded-full"
+          style={{ background: "radial-gradient(circle, rgba(158,27,31,0.22) 0%, rgba(201,169,110,0.10) 42%, transparent 68%)", filter: "blur(22px)" }}
         />
         {/* gold ring */}
         <div className="absolute inset-0 rounded-full" style={{ border: "1px solid rgba(201,169,110,0.35)" }} />
-        {/* white spotlight disc + watch */}
+        {/* white spotlight disc with cross-fading watches */}
         <div
-          className="absolute inset-4 rounded-full overflow-hidden flex items-center justify-center"
-          style={{ background: "#ffffff", boxShadow: "inset 0 1px 26px rgba(0,0,0,0.07), 0 40px 90px rgba(0,0,0,0.55)" }}
+          className="absolute inset-4 rounded-full overflow-hidden"
+          style={{ background: "#ffffff", boxShadow: "inset 0 1px 30px rgba(0,0,0,0.08), 0 44px 96px rgba(0,0,0,0.55)" }}
         >
-          <CatalogImage
-            key={m.sku}
-            src={m.url}
-            brand={m.brand}
-            sku={m.sku}
-            className="w-[82%] h-[82%] object-contain mix-blend-multiply hero-swap"
-          />
+          {models.map((m, k) => (
+            <div
+              key={m.sku}
+              aria-hidden={k !== i}
+              className="absolute inset-0 flex items-center justify-center will-change-[opacity]"
+              style={{
+                opacity: k === i ? 1 : 0,
+                transition: "opacity 900ms cubic-bezier(0.4, 0, 0.2, 1)",
+              }}
+            >
+              <CatalogImage
+                src={m.url}
+                brand={m.brand}
+                sku={m.sku}
+                className="w-[82%] h-[82%] object-contain mix-blend-multiply"
+              />
+            </div>
+          ))}
         </div>
-        {/* brand chip */}
-        <div
-          key={`chip-${m.sku}`}
-          className="absolute -bottom-3 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-[0.18em] text-white whitespace-nowrap shadow-lg hero-swap"
-          style={{ background: "var(--brand)" }}
-        >
-          {m.brand}
+
+        {/* brand chip (cross-fades) */}
+        <div className="absolute -bottom-3 left-1/2 -translate-x-1/2 h-7 w-40 pointer-events-none">
+          {models.map((m, k) => (
+            <span
+              key={m.sku}
+              aria-hidden={k !== i}
+              className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-[0.18em] text-white shadow-lg"
+              style={{ background: "var(--brand)", opacity: k === i ? 1 : 0, transition: "opacity 600ms ease" }}
+            >
+              {m.brand}
+            </span>
+          ))}
         </div>
+
         {/* dots */}
         {models.length > 1 && (
-          <div className="absolute -bottom-11 left-1/2 -translate-x-1/2 flex gap-2">
-            {models.map((mm, k) => (
+          <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2">
+            {models.map((m, k) => (
               <button
-                key={mm.sku}
+                key={m.sku}
                 type="button"
                 onClick={() => setI(k)}
-                aria-label={`Ver modelo ${k + 1}`}
-                className="w-2 h-2 rounded-full transition-all"
-                style={{ background: k === i ? "var(--brand)" : "rgba(255,255,255,0.28)", transform: k === i ? "scale(1.3)" : "scale(1)" }}
+                aria-label={`Ver ${m.brand}`}
+                className="h-1.5 rounded-full transition-all duration-500"
+                style={{
+                  width: k === i ? 20 : 6,
+                  background: k === i ? "var(--brand)" : "rgba(255,255,255,0.28)",
+                }}
               />
             ))}
           </div>
         )}
+
+        {/* accessible current label */}
+        <span className="sr-only">{active.brand}</span>
       </div>
     </div>
   );
