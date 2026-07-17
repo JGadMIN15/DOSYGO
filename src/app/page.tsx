@@ -6,6 +6,7 @@ import WatchCard from "@/components/WatchCard";
 import LogoTransparent from "@/components/LogoTransparent";
 import HeroCarousel from "@/components/HeroCarousel";
 import CatalogCard from "@/app/catalogo/CatalogCard";
+import Reveal from "@/components/Reveal";
 import { randomCatalogItemsWithImages, randomCatalogSampleWithImages, catalogImageUrl, CATALOG_SIZE } from "@/lib/catalog";
 import { ChevronRight, Shield, Truck, RotateCcw, Award } from "lucide-react";
 
@@ -138,6 +139,7 @@ export default async function HomePage() {
 
       {/* ── Relojes del catálogo (grid) ───────────── */}
       {gridItems.length > 0 && (
+        <Reveal>
         <section className="py-16 lg:py-24">
           <div className="max-w-7xl mx-auto px-6 lg:px-8">
             <div className="flex items-end justify-between mb-8">
@@ -156,6 +158,7 @@ export default async function HomePage() {
             </div>
           </div>
         </section>
+        </Reveal>
       )}
 
       {/* ── Featured products (si hay tienda) ─────── */}
@@ -201,6 +204,7 @@ export default async function HomePage() {
       )}
 
       {/* ── CTA banner ───────────────────────────── */}
+      <Reveal>
       <section className="max-w-7xl mx-auto px-6 lg:px-8 py-20">
         <div className="rounded-2xl relative overflow-hidden border border-white/10" style={{ background: "linear-gradient(135deg, var(--ink) 0%, var(--ink-2) 100%)" }}>
           <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--gold), transparent)" }} />
@@ -219,6 +223,7 @@ export default async function HomePage() {
           <div className="absolute bottom-0 left-0 right-0 h-px" style={{ background: "linear-gradient(90deg, transparent, var(--gold), transparent)" }} />
         </div>
       </section>
+      </Reveal>
 
     </div>
   );

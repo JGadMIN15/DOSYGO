@@ -42,6 +42,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" className={`h-full antialiased ${playfair.variable} ${inter.variable}`}>
       <body className="min-h-full flex flex-col bg-white" style={{ fontFamily: "var(--font-sans, system-ui, sans-serif)" }}>
+        <noscript>
+          <style dangerouslySetInnerHTML={{ __html: ".reveal{opacity:1 !important;transform:none !important;}" }} />
+        </noscript>
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />
