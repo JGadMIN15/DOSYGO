@@ -103,6 +103,31 @@ export function randomCatalogItemsWithImages(n: number): CatalogItem[] {
   return picks.slice(0, n);
 }
 
+// Search the catalogue for the chatbot: match a brand mentioned in the query,
+// else keyword-match on brand/sku. Prefers models that have a photo. Falls back
+// to a small sample so the assistant always has something to suggest.
+export function searchCatalog(query: string, limit = 8): CatalogItem[] {
+  const q = (query ?? "").toLowerCase();
+  const withImg = CATALOG.filter((c) => IMAGE_MAP[c.sku]);
+
+  // 1) explicit brand mention
+  const brands = [...new Set(CATALOG.map((c) => c.brand))];
+  const brand = brands.find((b) => b.length >= 3 && q.includes(b.toLowerCase()));
+  if (brand) return withImg.filter((c) => c.brand === brand).slice(0, limit);
+
+  // 2) keyword match on brand/sku
+  const words = q.split(/[^a-z0-9]+/i).filter((w) => w.length >= 3);
+  if (words.length) {
+    const hits = withImg.filter((c) =>
+      words.some((w) => c.brand.toLowerCase().includes(w) || c.sku.toLowerCase().includes(w))
+    );
+    if (hits.length) return hits.slice(0, limit);
+  }
+
+  // 3) fallback: a small varied sample
+  return randomCatalogSampleWithImages(limit);
+}
+
 // Deterministic "watch of the day": same model all day, changes each day.
 // Uses the current date as a stable index into the models that have a photo.
 export function dailyCatalogItemWithImages(): CatalogItem | null {
