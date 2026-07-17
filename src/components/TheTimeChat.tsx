@@ -19,7 +19,11 @@ const GREETING: Msg = {
 const CHIPS = ["Recomiéndame un reloj", "¿Tenéis Armani?", "Busco algo elegante", "Un reloj deportivo"];
 
 // Render assistant text with **bold** and internal [label](/catalogo/...) links.
-function render(text: string) {
+// First strips web-search artifacts (citation markers, external links).
+function render(raw: string) {
+  const text = raw
+    .replace(/\[(\d+)\]/g, "") // citation markers like [1]
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, "$1"); // external links -> label only
   const nodes: React.ReactNode[] = [];
   const re = /\[([^\]]+)\]\((\/catalogo[^\s)]*)\)|\*\*([^*]+)\*\*/g;
   let last = 0;
