@@ -92,6 +92,16 @@ body {
 @keyframes badgePop { 0% { transform: scale(1); } 40% { transform: scale(1.6); } 100% { transform: scale(1); } }
 .badge-pop { animation: badgePop 0.42s ease; }
 
+/* Loading skeleton with a soft shimmer sweep */
+.skeleton { position: relative; overflow: hidden; background: #ececef; border-radius: 10px; }
+.skeleton::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.65), transparent);
+  transform: translateX(-100%);
+  animation: shimmerMove 1.4s infinite;
+}
+@keyframes shimmerMove { 100% { transform: translateX(100%); } }
+
 /* Scroll reveal (sections/cards fade+rise into view) */
 .reveal { opacity: 0; transform: translateY(22px); transition: opacity 0.6s cubic-bezier(0.22,1,0.36,1), transform 0.6s cubic-bezier(0.22,1,0.36,1); }
 .reveal.reveal-in { opacity: 1; transform: none; }

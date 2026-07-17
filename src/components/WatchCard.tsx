@@ -7,7 +7,7 @@ import WatchImage from "./WatchImage";
 import { useState } from "react";
 import { formatPrice } from "@/lib/format";
 import { parseImages } from "@/lib/images";
-import { toast } from "@/lib/toast";
+import { useMiniCart } from "@/lib/mini-cart";
 
 interface Product {
   id: string;
@@ -31,7 +31,7 @@ export default function WatchCard({ product }: { product: Product }) {
     e.stopPropagation();
     addItem({ id: product.id, name: product.name, price: product.price, image: images[0] ?? "" });
     setAdded(true);
-    toast(`${product.name} añadido al carrito`, "success");
+    useMiniCart.getState().openCart();
     setTimeout(() => setAdded(false), 2000);
   };
 

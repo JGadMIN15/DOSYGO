@@ -4,7 +4,7 @@ import { useCartStore } from "@/lib/store";
 import { ShoppingCart, Check } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
-import { toast } from "@/lib/toast";
+import { useMiniCart } from "@/lib/mini-cart";
 
 interface Props {
   product: {
@@ -28,7 +28,7 @@ export default function AddToCartButton({ product }: Props) {
       image: product.image,
     });
     setAdded(true);
-    toast(`${product.name} añadido al carrito`, "success");
+    useMiniCart.getState().openCart();
     setTimeout(() => setAdded(false), 2000);
   };
 
