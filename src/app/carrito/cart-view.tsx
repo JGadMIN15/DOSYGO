@@ -11,9 +11,11 @@ import { toast } from "@/lib/toast";
 export default function CartView({
   freeShippingCents,
   shippingCents,
+  rewards = [],
 }: {
   freeShippingCents: number;
   shippingCents: number;
+  rewards?: { id: string; percent: number }[];
 }) {
   const { items, removeItem, updateQuantity, total, count } = useCartStore();
   const [loading, setLoading] = useState(false);
@@ -21,6 +23,7 @@ export default function CartView({
   const [phone, setPhone] = useState("");
   const [removedCount, setRemovedCount] = useState(0);
   const [outOfStock, setOutOfStock] = useState<Set<string>>(new Set());
+  const [selectedReward, setSelectedReward] = useState("");
 
   // Re-validate the cart against the DB: drop products that were
   // removed/archived/expired and flag out-of-stock ones. Prevents "ghost" items
@@ -119,7 +122,7 @@ export default function CartView({
       const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ items, phone: phone.trim(), email: email.trim() }),
+        body: JSON.stringify({ items, phone: phone.trim(), email: email.trim(), rewardId: selectedReward || undefined }),
       });
       const data = await res.json();
       if (data.url) {
@@ -164,7 +167,9 @@ export default function CartView({
 
   const subtotal = total();
   const shipping = subtotal >= freeShippingCents ? 0 : shippingCents;
-  const grandTotal = subtotal + shipping;
+  const reward = rewards.find((r) => r.id === selectedReward);
+  const discount = reward ? Math.round((subtotal * reward.percent) / 100) : 0;
+  const grandTotal = subtotal - discount + shipping;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -245,6 +250,23 @@ export default function CartView({
           <div className="bg-white rounded-2xl border border-gray-100 p-6 shadow-sm sticky top-20">
             <h2 className="font-black text-lg text-gray-900 mb-5">Resumen del pedido</h2>
 
+            {rewards.length > 0 && (
+              <div className="mb-5">
+                <label className="block text-xs font-medium text-gray-700 mb-1">🎁 Descuento del club</label>
+                <select
+                  value={selectedReward}
+                  onChange={(e) => setSelectedReward(e.target.value)}
+                  className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm outline-none focus:border-gray-900"
+                >
+                  <option value="">Sin descuento</option>
+                  {rewards.map((r) => (
+                    <option key={r.id} value={r.id}>Aplicar −{r.percent}%</option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-gray-400 mt-1">Solo uno por pedido (no se acumulan).</p>
+              </div>
+            )}
+
             <div className="space-y-3 mb-5">
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Subtotal ({count()} artículos)</span>
@@ -258,6 +280,12 @@ export default function CartView({
               </div>
               {shipping > 0 && (
                 <p className="text-xs text-gray-400">Añade {formatPrice(freeShippingCents - subtotal)} más para envío gratis</p>
+              )}
+              {discount > 0 && (
+                <div className="flex justify-between text-sm font-semibold" style={{ color: "var(--brand)" }}>
+                  <span>Descuento{reward ? ` (-${reward.percent}%)` : ""}</span>
+                  <span>−{formatPrice(discount)}</span>
+                </div>
               )}
               <div className="border-t border-gray-100 pt-3 flex justify-between font-black text-lg text-gray-900">
                 <span>Total</span>

@@ -1,13 +1,15 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@/generated/prisma/client";
 import { hashPassword, verifyPassword } from "@/lib/auth";
-import { setCustomerSession, clearCustomerSession } from "@/lib/customer-auth";
+import { setCustomerSession, clearCustomerSession, getCurrentCustomer } from "@/lib/customer-auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { getClientIp } from "@/lib/client-ip";
+import { decideWelcomeSpin, decideLevelupSpin, type Prize } from "@/lib/roulette";
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 const USERNAME_RE = /^[a-zA-Z0-9_]{3,30}$/;
@@ -97,4 +99,70 @@ export async function loginCustomer(input: {
 export async function logoutCustomer(): Promise<void> {
   await clearCustomerSession();
   redirect("/");
+}
+
+export interface SpinResult {
+  ok: boolean;
+  error?: string;
+  prize?: Prize; // 0 = nada
+  source?: "welcome" | "levelup";
+  remainingSpins?: number;
+}
+
+// Spin the roulette. The PRIZE IS DECIDED HERE (server) — the client only
+// animates to the returned result. Consumes one spin atomically ($executeRaw:
+// the Neon HTTP adapter rejects updateMany), then records the won discount.
+export async function spinRoulette(): Promise<SpinResult> {
+  const ip = getClientIp(await headers());
+  if (!rateLimit(`spin:${ip}`, 20, 60_000).allowed) {
+    return { ok: false, error: "Vas muy rápido. Espera un momento." };
+  }
+
+  const customer = await getCurrentCustomer();
+  if (!customer) return { ok: false, error: "Inicia sesión para girar." };
+
+  let source: "welcome" | "levelup";
+  let prize: Prize;
+
+  if (!customer.welcomeSpun) {
+    source = "welcome";
+    prize = decideWelcomeSpin();
+  } else if (customer.pendingSpins > 0) {
+    source = "levelup";
+    prize = decideLevelupSpin(customer.totalSpentCents);
+  } else {
+    return { ok: false, error: "No te quedan tiradas." };
+  }
+
+  // Consume the spin atomically (guards against a double-spend race).
+  try {
+    const consumed =
+      source === "welcome"
+        ? await prisma.$executeRaw`
+            UPDATE "Customer" SET "welcomeSpun" = true, "updatedAt" = now()
+            WHERE id = ${customer.id} AND "welcomeSpun" = false`
+        : await prisma.$executeRaw`
+            UPDATE "Customer" SET "pendingSpins" = "pendingSpins" - 1, "updatedAt" = now()
+            WHERE id = ${customer.id} AND "pendingSpins" > 0`;
+    if (consumed === 0) return { ok: false, error: "No te quedan tiradas." };
+  } catch (err) {
+    console.error("spinRoulette consume failed:", err);
+    return { ok: false, error: "No se pudo girar. Inténtalo de nuevo." };
+  }
+
+  if (prize > 0) {
+    try {
+      await prisma.discountReward.create({
+        data: { customerId: customer.id, percent: prize, source },
+      });
+    } catch (err) {
+      console.error("spinRoulette reward create failed:", err);
+    }
+  }
+
+  const welcomeLeft = source === "welcome" ? 0 : customer.welcomeSpun ? 0 : 1;
+  const pendingLeft = source === "levelup" ? customer.pendingSpins - 1 : customer.pendingSpins;
+
+  revalidatePath("/cuenta");
+  return { ok: true, prize, source, remainingSpins: welcomeLeft + pendingLeft };
 }

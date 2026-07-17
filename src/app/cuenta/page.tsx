@@ -1,8 +1,9 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { Trophy, Ticket, Package, Sparkles, LogOut, Gift } from "lucide-react";
+import { Trophy, Ticket, Package, Sparkles, LogOut } from "lucide-react";
 import { getCurrentCustomer } from "@/lib/customer-auth";
 import { logoutCustomer } from "./actions";
+import Roulette from "./Roulette";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/format";
 import { RESERVATION_STATUS_LABEL } from "@/lib/reservation";
@@ -80,38 +81,35 @@ export default async function CuentaPage() {
           </p>
         </div>
 
-        {/* Ruleta + recompensas */}
-        <div className="grid sm:grid-cols-2 gap-5 mb-5">
-          <div className="rounded-2xl border border-white/10 p-6" style={{ background: "linear-gradient(180deg,#15151c,#0c0c11)" }}>
-            <div className="flex items-center gap-2 mb-1.5">
-              <Sparkles className="w-5 h-5" style={{ color: "var(--gold)" }} />
-              <h2 className="text-white font-bold">Ruleta</h2>
-            </div>
-            <p className="text-sm text-gray-400 mb-4">
-              {totalSpins > 0
-                ? `Tienes ${totalSpins} ${totalSpins === 1 ? "tirada disponible" : "tiradas disponibles"}.`
-                : "Sube de nivel para conseguir tiradas."}
-            </p>
-            <span className="inline-flex items-center gap-1.5 text-xs text-gray-300 bg-white/5 border border-white/10 rounded-full px-3 py-1.5">
-              <Gift className="w-3.5 h-3.5" style={{ color: "var(--gold)" }} /> Muy pronto podrás girarla aquí
-            </span>
+        {/* Ruleta */}
+        <div className="rounded-2xl border border-white/10 p-6 mb-5" style={{ background: "linear-gradient(180deg,#15151c,#0c0c11)" }}>
+          <div className="flex items-center gap-2 mb-1.5">
+            <Sparkles className="w-5 h-5" style={{ color: "var(--gold)" }} />
+            <h2 className="text-white font-bold">Ruleta de premios</h2>
           </div>
+          <p className="text-sm text-gray-400 mb-4">
+            {totalSpins > 0
+              ? "¡Gírala y llévate un descuento para tu próxima compra!"
+              : "Sube de nivel (cada 400 € de compra) para ganar tiradas."}
+          </p>
+          <Roulette initialSpins={totalSpins} />
+        </div>
 
-          <div className="rounded-2xl border border-white/10 p-6" style={{ background: "linear-gradient(180deg,#15151c,#0c0c11)" }}>
-            <h2 className="text-white font-bold mb-1.5">Mis descuentos</h2>
-            {availableRewards.length === 0 ? (
-              <p className="text-sm text-gray-400">Aún no tienes descuentos. Gánalos con la ruleta.</p>
-            ) : (
-              <div className="flex flex-wrap gap-2 mt-2">
-                {availableRewards.map((r) => (
-                  <span key={r.id} className="inline-flex items-center gap-1 text-sm font-bold text-white rounded-lg px-3 py-1.5" style={{ background: "linear-gradient(90deg, var(--brand), var(--brand-dark))" }}>
-                    -{r.percent}%
-                  </span>
-                ))}
-              </div>
-            )}
-            <p className="text-[11px] text-gray-500 mt-3">Se aplican en cualquier pedido, uno por pedido (no se acumulan).</p>
-          </div>
+        {/* Descuentos */}
+        <div className="rounded-2xl border border-white/10 p-6 mb-5" style={{ background: "linear-gradient(180deg,#15151c,#0c0c11)" }}>
+          <h2 className="text-white font-bold mb-1.5">Mis descuentos</h2>
+          {availableRewards.length === 0 ? (
+            <p className="text-sm text-gray-400">Aún no tienes descuentos. Gánalos con la ruleta.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {availableRewards.map((r) => (
+                <span key={r.id} className="inline-flex items-center gap-1 text-sm font-bold text-white rounded-lg px-3 py-1.5" style={{ background: "linear-gradient(90deg, var(--brand), var(--brand-dark))" }}>
+                  -{r.percent}%
+                </span>
+              ))}
+            </div>
+          )}
+          <p className="text-[11px] text-gray-500 mt-3">Se aplican en cualquier pedido, uno por pedido (no se acumulan).</p>
         </div>
 
         {/* Reservas */}

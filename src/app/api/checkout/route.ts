@@ -3,6 +3,7 @@ import { getStripe } from "@/lib/stripe";
 import { prisma } from "@/lib/prisma";
 import { verifyValue } from "@/lib/auth";
 import { getSettings } from "@/lib/settings";
+import { getCurrentCustomer } from "@/lib/customer-auth";
 
 interface CartItem {
   id: string;
@@ -97,6 +98,33 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    // --- Optional loyalty discount (must belong to the logged-in customer and
+    //     be unused; one per order, non-stackable). Applied as a one-time Stripe
+    //     coupon; the reward is marked used by the webhook on payment. ---
+    const discounts: { coupon: string }[] = [];
+    let appliedRewardId = "";
+    const rewardId = typeof body.rewardId === "string" ? body.rewardId : "";
+    if (rewardId) {
+      if (!isValidCuid(rewardId)) throw new CheckoutError("Descuento no válido");
+      const customer = await getCurrentCustomer();
+      if (!customer) throw new CheckoutError("Inicia sesión para usar tu descuento", 403);
+      const reward = await prisma.discountReward.findFirst({
+        where: { id: rewardId, customerId: customer.id, used: false },
+        select: { id: true, percent: true },
+      });
+      if (!reward) {
+        return NextResponse.json({ error: "Ese descuento ya no está disponible." }, { status: 409 });
+      }
+      const coupon = await getStripe().coupons.create({
+        percent_off: reward.percent,
+        duration: "once",
+        max_redemptions: 1,
+        name: `Club -${reward.percent}%`,
+      });
+      discounts.push({ coupon: coupon.id });
+      appliedRewardId = reward.id;
+    }
+
     const settings = await getSettings();
     const appUrl = (process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000").replace(/[^\x20-\x7E]/g, "").trim();
     const subtotal = items.reduce((sum, item) => {
@@ -124,6 +152,7 @@ export async function POST(req: NextRequest) {
       mode: "payment",
       customer_email: email,
       line_items: lineItems,
+      ...(discounts.length ? { discounts } : {}),
       shipping_address_collection: {
         allowed_countries: [
           "ES", "PT", "FR", "DE", "IT", "GB", "NL", "BE", "AT", "CH",
@@ -152,6 +181,7 @@ export async function POST(req: NextRequest) {
       metadata: {
         email,
         phone,
+        rewardId: appliedRewardId,
         items: JSON.stringify(items.map((i) => ({
           id: i.id,
           qty: i.quantity,

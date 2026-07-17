@@ -256,5 +256,18 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // --- Mark the applied loyalty discount as spent (guarded: only if still
+  //     unused, so a retried delivery can't error and it's never double-spent). ---
+  const usedRewardId = session.metadata?.rewardId;
+  if (usedRewardId && CUID_RE.test(usedRewardId)) {
+    try {
+      await prisma.$executeRaw`
+        UPDATE "DiscountReward" SET used = true, "usedAt" = now()
+        WHERE id = ${usedRewardId} AND used = false`;
+    } catch (err) {
+      console.error("Reward mark-used failed:", trackingCode, err);
+    }
+  }
+
   return NextResponse.json({ received: true });
 }
